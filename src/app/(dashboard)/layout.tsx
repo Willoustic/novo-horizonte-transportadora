@@ -26,7 +26,7 @@ export default async function DashboardLayout({
           <a href="/estoque" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Estoque</a>
           <a href="/emprestimos" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Emprestimos</a>
           <a href="/cotacoes" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Cotacoes</a>
-          <a href="/cadastros/postos" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Cadastros</a>
+          <a href="/cadastros" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Cadastros</a>
           <a href="/parametros" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Parametros</a>
         </nav>
       </aside>
