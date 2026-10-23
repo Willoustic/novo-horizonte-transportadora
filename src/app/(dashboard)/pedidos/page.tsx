@@ -83,14 +83,21 @@ export default function PedidosPage() {
     if (form.itens.length === 0) { alert("Adicione pelo menos um item"); return }
     
     const payload = {
-      ...form,
-      data: formatDateToDB(form.data)
+      posto_id: form.posto_id,
+      observacoes: form.observacoes,
+      data: formatDateToDB(form.data),
+      itens: form.itens,
     }
 
-    const { error } = await supabase.from('pedidos').insert(payload)
+    const res = await fetch("/api/pedidos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
     
-    if (error) {
-      alert("Erro ao criar pedido: " + error.message)
+    if (!res.ok) {
+      const err = await res.json()
+      alert("Erro ao criar pedido: " + (err.error || "erro desconhecido"))
       return
     }
 
@@ -100,14 +107,27 @@ export default function PedidosPage() {
   }
 
   async function handleStatusChange(id: string, status: string) {
-    const { error } = await supabase.from('pedidos').update({ status }).eq('id', id)
-    if (error) alert("Erro ao atualizar status")
+    const res = await fetch(`/api/pedidos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert("Erro ao atualizar status: " + (err.error || "erro desconhecido"))
+      return
+    }
     fetchData()
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Deseja realmente excluir este pedido?")) return
-    await fetch(`/api/pedidos?id=${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/pedidos/${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert("Erro ao excluir pedido: " + (err.error || "erro desconhecido"))
+      return
+    }
     fetchData()
   }
 
