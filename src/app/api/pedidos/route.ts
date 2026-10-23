@@ -1,24 +1,32 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const data = searchParams.get("data")
   const supabase = await createClient()
-  const { data, error } = await supabase
+
+  let query = supabase
     .from("pedidos")
     .select("*, posto:postos(nome, abreviacao), itens:itens_pedido(*, combustivel:combustiveis(nome, abreviacao))")
-    .order("created_at", { ascending: false })
+
+  if (data) {
+    query = query.eq("data", data)
+  }
+
+  const { data: pedidos, error } = await query.order("created_at", { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(pedidos)
 }
 
 export async function POST(request: Request) {
   const supabase = await createClient()
   const body = await request.json()
-  const { posto_id, observacoes, itens } = body
+  const { posto_id, observacoes, itens, data } = body
 
   const { data: pedido, error: pedidoError } = await supabase
     .from("pedidos")
-    .insert({ posto_id, observacao: observacoes, data: new Date().toISOString().split("T")[0] })
+    .insert({ posto_id, observacao: observacoes, data: data || new Date().toISOString().split("T")[0] })
     .select()
     .single()
 
@@ -35,4 +43,19 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(pedido, { status: 201 })
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get("id")
+  const supabase = await createClient()
+
+  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
+
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ ativo: false })
+    .eq("id", id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
 }

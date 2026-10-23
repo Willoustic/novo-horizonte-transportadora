@@ -31,3 +31,18 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(result, { status: 201 })
 }
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get("id")
+  const supabase = await createClient()
+
+  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
+
+  const { error } = await supabase
+    .from("estoque_snapshots")
+    .update({ ativo: false })
+    .eq("id", id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

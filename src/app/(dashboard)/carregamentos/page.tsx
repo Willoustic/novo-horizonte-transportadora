@@ -1,6 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Trash2, Plus } from "lucide-react"
+import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils"
 
 interface Carregamento {
   id: string
@@ -11,8 +16,7 @@ interface Carregamento {
   volume: number
   base_origem: string | null
   status: string
-  data_saida: string | null
-  data_chegada: string | null
+  data: string
   created_at: string
   posto_destino?: { nome: string; abreviacao: string }
   motorista?: { nome: string }
@@ -43,16 +47,18 @@ export default function CarregamentosPage() {
   const [tanquesCarreta, setTanquesCarreta] = useState<any[]>([])
   const [postos, setPostos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({
     posto_destino_id: "", motorista_id: "", cavalo_id: "", tanque_carreta_id: "",
-    volume: 0, base_origem: "", status: "carregando",
+    volume: 0, base_origem: "", status: "carregando", data: new Date(),
   })
 
   async function fetchData() {
     setLoading(true)
+    const dateStr = formatDateToDB(selectedDate)
     const [carregRes, motRes, cavRes, tanqRes, postosRes] = await Promise.all([
-      fetch("/api/carregamentos"),
+      fetch(`/api/carregamentos?data=${dateStr}`),
       fetch("/api/cadastros/motoristas"),
       fetch("/api/cadastros/cavalos"),
       fetch("/api/cadastros/tanques-carreta"),
@@ -66,17 +72,17 @@ export default function CarregamentosPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [selectedDate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     await fetch("/api/carregamentos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, data: formatDateToDB(form.data) }),
     })
     setModalOpen(false)
-    setForm({ posto_destino_id: "", motorista_id: "", cavalo_id: "", tanque_carreta_id: "", volume: 0, base_origem: "", status: "carregando" })
+    setForm({ posto_destino_id: "", motorista_id: "", cavalo_id: "", tanque_carreta_id: "", volume: 0, base_origem: "", status: "carregando", data: new Date() })
     fetchData()
   }
 
@@ -89,12 +95,21 @@ export default function CarregamentosPage() {
     fetchData()
   }
 
+  async function handleDelete(id: string) {
+    if (!confirm("Deseja realmente excluir este carregamento?")) return
+    await fetch(`/api/carregamentos?id=${id}`, { method: "DELETE" })
+    fetchData()
+  }
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Carregamentos</h1>
-        <button onClick={() => { setForm({ posto_destino_id: "", motorista_id: "", cavalo_id: "", tanque_carreta_id: "", volume: 0, base_origem: "", status: "carregando" }); setModalOpen(true) }} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
-          + Novo Carregamento
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">Carregamentos</h1>
+          <DatePicker date={selectedDate} onChange={setSelectedDate} />
+        </div>
+        <button onClick={() => { setForm({ posto_destino_id: "", motorista_id: "", cavalo_id: "", tanque_carreta_id: "", volume: 0, base_origem: "", status: "carregando", data: new Date() }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+          <Plus className="h-4 w-4" /> Novo Carregamento
         </button>
       </div>
 
@@ -113,11 +128,12 @@ export default function CarregamentosPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Base Origem</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {carregamentos.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Nenhum carregamento encontrado</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">Nenhum carregamento para o dia {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</td></tr>
               ) : (
                 carregamentos.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50">
@@ -137,7 +153,12 @@ export default function CarregamentosPage() {
                         </select>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td>
+                    <td className="px-4 py-3 text-sm">{formatDateFromDB(c.data)}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => handleDelete(c.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -147,9 +168,12 @@ export default function CarregamentosPage() {
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl">
-            <h2 className="text-lg font-bold mb-4">Novo Carregamento</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Novo Carregamento</h2>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -158,6 +182,10 @@ export default function CarregamentosPage() {
                     <option value="">Selecione...</option>
                     {postos.map((p) => (<option key={p.id} value={p.id}>{p.abreviacao}</option>))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Data do Carregamento</label>
+                  <DatePicker date={form.data} onChange={(d) => setForm({ ...form, data: d })} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Motorista</label>
@@ -189,7 +217,7 @@ export default function CarregamentosPage() {
                   <input type="text" value={form.base_origem} onChange={(e) => setForm({ ...form, base_origem: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
                 </div>
               </div>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 pt-4">
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Criar Carregamento</button>
               </div>

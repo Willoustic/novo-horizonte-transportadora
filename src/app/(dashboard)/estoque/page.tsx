@@ -1,19 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Trash2, Plus } from "lucide-react"
+import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils"
 
 export default function EstoquePage() {
   const [snapshots, setSnapshots] = useState<any[]>([])
   const [tanques, setTanques] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ tanque_posto_id: "", volume: 0, data: new Date().toISOString().split("T")[0] })
+  const [form, setForm] = useState({ tanque_posto_id: "", volume: 0, data: new Date() })
 
   async function fetchData() {
     setLoading(true)
+    const dateStr = formatDateToDB(selectedDate)
     const [snapRes, tanqRes] = await Promise.all([
-      fetch(`/api/estoque?data=${selectedDate}`),
+      fetch(`/api/estoque?data=${dateStr}`),
       fetch("/api/cadastros/tanques-posto"),
     ])
     setSnapshots(await snapRes.json())
@@ -28,23 +34,29 @@ export default function EstoquePage() {
     await fetch("/api/estoque", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, data: formatDateToDB(form.data) }),
     })
     setModalOpen(false)
     setForm({ tanque_posto_id: "", volume: 0, data: selectedDate })
     fetchData()
   }
 
+  async function handleDelete(id: string) {
+    if (!confirm("Deseja realmente excluir este registro de estoque?")) return
+    await fetch(`/api/estoque?id=${id}`, { method: "DELETE" })
+    fetchData()
+  }
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Estoque</h1>
-        <div className="flex items-center space-x-4">
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg" />
-          <button onClick={() => { setForm({ tanque_posto_id: "", volume: 0, data: selectedDate }); setModalOpen(true) }} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
-            + Registrar Volume
-          </button>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">Estoque</h1>
+          <DatePicker date={selectedDate} onChange={setSelectedDate} />
         </div>
+        <button onClick={() => { setForm({ tanque_posto_id: "", volume: 0, data: selectedDate }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+          <Plus className="h-4 w-4" /> Registrar Volume
+        </button>
       </div>
 
       {loading ? (
@@ -61,11 +73,12 @@ export default function EstoquePage() {
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Capacidade</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Estoque Min.</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {snapshots.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Nenhum snapshot para esta data</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Nenhum snapshot para o dia {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</td></tr>
               ) : (
                 snapshots.map((s) => {
                   const tp = s.tanque_posto
@@ -83,6 +96,11 @@ export default function EstoquePage() {
                           {below ? "Abaixo do Minimo" : "OK"}
                         </span>
                       </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleDelete(s.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
                     </tr>
                   )
                 })
@@ -93,9 +111,12 @@ export default function EstoquePage() {
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-bold mb-4">Registrar Volume</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Registrar Volume</h2>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tanque do Posto</label>
@@ -110,9 +131,9 @@ export default function EstoquePage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
-                <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                <DatePicker date={form.data} onChange={(d) => setForm({ ...form, data: d })} />
               </div>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 pt-4">
                 <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Salvar</button>
               </div>
