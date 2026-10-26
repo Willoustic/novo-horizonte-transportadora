@@ -13,12 +13,11 @@ export async function POST(request: Request) {
 
   const supabase = await createClient()
 
-  // Load Vibra supplier (fornecedor tipo 'vibra')
+  // Load Vibra supplier (fornecedor tipo 'vibra' or name contains 'Vibra')
   const { data: fornecedorVibra } = await supabase
     .from("fornecedores")
     .select("id")
-    .eq("tipo", "vibra")
-    .eq("ativo", true)
+    .or("tipo.eq.vibra,nome.ilike.%vibra%")
     .limit(1)
     .single()
 
