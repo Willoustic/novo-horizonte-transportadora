@@ -92,7 +92,7 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
   const precos: VibraPreco[] = []
   let emailsProcessados = 0
   let restantes = 0
-  let debug: any = null
+  const scannedEmails: any[] = []
 
   const client = new ImapFlow({
     host: params.host,
@@ -114,41 +114,60 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
       if (!uids || uids.length === 0) {
         const st = await withTimeout(client.status(params.folder, { messages: true, unseen: true }), 5000, "status")
         restantes = (st as any).unseen || 0
-        return { precos, emailsProcessados, restantes, debug: { reason: "no_uids" } }
+        return { precos, emailsProcessados, restantes, debug: { reason: "no_uids", scannedEmails } }
       }
 
-      const uid = uids[0]
+      const MAX_SCAN = 5
+      const toScan = uids.slice(0, MAX_SCAN)
 
-      const msg = await withTimeout(client.fetchOne(uid, { source: true, envelope: true, uid: true }, { uid: true }), 8000, "fetchOne")
+      let processedOne = false
 
-      if (msg) {
+      for (const uid of toScan) {
+        if (processedOne) break
+
+        const msg = await withTimeout(client.fetchOne(uid, { source: true, envelope: true, uid: true }, { uid: true }), 8000, "fetchOne")
+
+        if (!msg) continue
+
         const subject = msg.envelope?.subject || ""
-        if (!params.subjectFilter || subject.includes(params.subjectFilter)) {
-          const parsed = await withTimeout(simpleParser(msg.source as any), 8000, "simpleParser")
-          const attachments = parsed.attachments || []
+        const from = msg.envelope?.from?.map((f: any) => f.address).join(", ") || ""
 
-          debug = {
-            subject,
-            from: msg.envelope?.from?.map((f: any) => f.address).join(", "),
-            attachmentCount: attachments.length,
-            attachmentNames: attachments.map((a: any) => a.filename),
-            parsedTextSnippet: (parsed.text || "").slice(0, 200),
-          }
+        // Subject filter check
+        const subjectOk = !params.subjectFilter || subject.includes(params.subjectFilter)
 
-          for (const att of attachments) {
-            const filename = att.filename || ""
-            if (!/^DETA_2_.*\\.XLS$/i.test(filename) && !/\\.XLS$/i.test(filename)) continue
-
-            const buffer = att.content as Buffer
-            const extracted = parseXlsBuffer(buffer)
-            precos.push(...extracted)
-          }
-
-          await withTimeout(client.messageFlagsAdd(uid, ["\\Seen"], { uid: true }), 5000, "messageFlagsAdd")
-          emailsProcessados++
-        } else {
-          debug = { subject, reason: "subject_filter_mismatch", filter: params.subjectFilter }
+        if (!subjectOk) {
+          scannedEmails.push({ uid, subject: subject.slice(0, 80), from, skipped: "subject_filter" })
+          continue
         }
+
+        const parsed = await withTimeout(simpleParser(msg.source as any), 8000, "simpleParser")
+        const attachments = parsed.attachments || []
+
+        const attNames = attachments.map((a: any) => a.filename)
+
+        scannedEmails.push({ uid, subject: subject.slice(0, 80), from, attachments: attNames })
+
+        // Check if any attachment is a Vibra XLS
+        const vibraAttachments = attachments.filter((a: any) => {
+          const fn = a.filename || ""
+          return /^DETA_2_.*\\.XLS$/i.test(fn) || /\\.XLS$/i.test(fn)
+        })
+
+        if (vibraAttachments.length === 0) {
+          // Not a Vibra email with XLS — skip without marking as read
+          continue
+        }
+
+        // Process Vibra attachments
+        for (const att of vibraAttachments) {
+          const buffer = att.content as Buffer
+          const extracted = parseXlsBuffer(buffer)
+          precos.push(...extracted)
+        }
+
+        await withTimeout(client.messageFlagsAdd(uid, ["\\Seen"], { uid: true }), 5000, "messageFlagsAdd")
+        emailsProcessados++
+        processedOne = true
       }
 
       const st = await withTimeout(client.status(params.folder, { messages: true, unseen: true }), 5000, "status")
@@ -160,5 +179,5 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     try { await client.logout() } catch {}
   }
 
-  return { precos, emailsProcessados, restantes, debug }
+  return { precos, emailsProcessados, restantes, debug: { scannedEmails } }
 }
