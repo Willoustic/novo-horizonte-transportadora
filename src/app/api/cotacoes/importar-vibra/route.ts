@@ -120,5 +120,6 @@ export async function POST(request: Request) {
     precosEncontrados: precos.length,
     importados,
     erros,
+    debug: result.debug,
   })
 }

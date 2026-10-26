@@ -83,7 +83,7 @@ function parseXlsBuffer(buffer: Buffer): VibraPreco[] {
 const withTimeout = <T>(p: Promise<T>, ms: number, label: string): Promise<T> =>
   Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout em ${label} após ${ms}ms`)), ms))])
 
-export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emailsProcessados: number; restantes: number }> {
+export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emailsProcessados: number; restantes: number; debug?: any }> {
   const params = await loadImapParams()
   if (!params.host || !params.user || !params.password) {
     throw new Error("Parâmetros IMAP não configurados")
@@ -92,6 +92,7 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
   const precos: VibraPreco[] = []
   let emailsProcessados = 0
   let restantes = 0
+  let debug: any = null
 
   const client = new ImapFlow({
     host: params.host,
@@ -113,7 +114,7 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
       if (!uids || uids.length === 0) {
         const st = await withTimeout(client.status(params.folder, { messages: true, unseen: true }), 5000, "status")
         restantes = (st as any).unseen || 0
-        return { precos, emailsProcessados, restantes }
+        return { precos, emailsProcessados, restantes, debug: { reason: "no_uids" } }
       }
 
       const uid = uids[0]
@@ -126,9 +127,17 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
           const parsed = await withTimeout(simpleParser(msg.source as any), 8000, "simpleParser")
           const attachments = parsed.attachments || []
 
+          debug = {
+            subject,
+            from: msg.envelope?.from?.map((f: any) => f.address).join(", "),
+            attachmentCount: attachments.length,
+            attachmentNames: attachments.map((a: any) => a.filename),
+            parsedTextSnippet: (parsed.text || "").slice(0, 200),
+          }
+
           for (const att of attachments) {
             const filename = att.filename || ""
-            if (!/^DETA_2_.*\.XLS$/i.test(filename) && !/\.XLS$/i.test(filename)) continue
+            if (!/^DETA_2_.*\\.XLS$/i.test(filename) && !/\\.XLS$/i.test(filename)) continue
 
             const buffer = att.content as Buffer
             const extracted = parseXlsBuffer(buffer)
@@ -137,6 +146,8 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
 
           await withTimeout(client.messageFlagsAdd(uid, ["\\Seen"], { uid: true }), 5000, "messageFlagsAdd")
           emailsProcessados++
+        } else {
+          debug = { subject, reason: "subject_filter_mismatch", filter: params.subjectFilter }
         }
       }
 
@@ -149,5 +160,5 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     try { await client.logout() } catch {}
   }
 
-  return { precos, emailsProcessados, restantes }
+  return { precos, emailsProcessados, restantes, debug }
 }
