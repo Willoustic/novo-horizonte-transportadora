@@ -15,7 +15,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const supabase = await createClient()
   const body = await request.json()
 
-  const sensitiveKeys = ["senha", "login", "email", "senha_app"]
+  const sensitiveKeys = ["senha", "login", "email", "senha_app", "password", "imap"]
   const isSensitive = body.chave
     ? sensitiveKeys.some((k) => body.chave.toLowerCase().includes(k))
     : false

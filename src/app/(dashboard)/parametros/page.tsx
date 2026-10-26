@@ -55,7 +55,7 @@ export default function ParametrosPage() {
 
   const isSensitive = (chave: string) => {
     const lower = chave.toLowerCase()
-    return ["senha", "login", "email", "senha_app"].some((k) => lower.includes(k))
+    return ["senha", "login", "email", "senha_app", "password", "imap"].some((k) => lower.includes(k))
   }
 
   return (

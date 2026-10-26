@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const body = await request.json()
 
   // Encrypt sensitive values (chave contains "senha", "login", "email", "senha_app")
-  const sensitiveKeys = ["senha", "login", "email", "senha_app"]
+  const sensitiveKeys = ["senha", "login", "email", "senha_app", "password", "imap"]
   const isSensitive = sensitiveKeys.some((k) => body.chave?.toLowerCase().includes(k))
 
   const valor = isSensitive ? encrypt(body.valor) : body.valor
