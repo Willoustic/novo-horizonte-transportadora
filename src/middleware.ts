@@ -27,6 +27,11 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Allow cron API routes without authentication (they use CRON_SECRET)
+  if (request.nextUrl.pathname.startsWith('/api/cotacoes/importar-vibra')) {
+    return NextResponse.next()
+  }
+
   if (!user && !request.nextUrl.pathname.startsWith('/login')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
