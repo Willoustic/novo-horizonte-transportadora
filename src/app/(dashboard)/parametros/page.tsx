@@ -73,8 +73,8 @@ export default function ParametrosPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-500">Carregando...</div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo</th>
@@ -98,7 +98,7 @@ export default function ParametrosPage() {
                       {isSensitive(row.chave) ? "••••••••" : row.valor}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">{row.descricao || "-"}</td>
-                    <td className="px-4 py-3 text-right space-x-2">
+                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => handleEdit(row)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Editar</button>
                       <button onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Excluir</button>
                     </td>
