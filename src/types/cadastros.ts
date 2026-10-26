@@ -22,7 +22,7 @@ export interface Fornecedor {
   id: string
   nome: string
   telefone: string | null
-  tipo: "vibra" | "whatsapp" | "outro"
+  tipo: "whatsapp" | "outro"
   ativo: boolean
 }
 
