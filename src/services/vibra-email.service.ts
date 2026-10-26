@@ -101,7 +101,11 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     logger: false,
   })
 
-  await client.connect()
+  try {
+    await client.connect()
+  } catch (e: any) {
+    throw new Error(`IMAP connect failed (${params.host}:${params.port} user=${params.user}): ${e?.message || e}`)
+  }
   try {
     const lock = await client.getMailboxLock(params.folder)
     try {
