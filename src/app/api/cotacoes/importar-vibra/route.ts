@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { fetchVibraEmails } from "@/services/vibra-email.service"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 const CRON_SECRET = process.env.CRON_SECRET || ""
 
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Load Vibra supplier (fornecedor tipo 'vibra' or name contains 'Vibra')
   const { data: fornecedorVibra } = await supabase
