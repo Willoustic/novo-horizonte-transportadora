@@ -1,7 +1,7 @@
 import { ImapFlow } from "imapflow"
 import { simpleParser } from "mailparser"
 import * as XLSX from "xlsx"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { decrypt } from "@/lib/crypto"
 
 export interface VibraPreco {
@@ -22,7 +22,7 @@ interface ParametrosImap {
 }
 
 async function loadImapParams(): Promise<ParametrosImap> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data } = await supabase
     .from("parametros")
     .select("chave, valor")
