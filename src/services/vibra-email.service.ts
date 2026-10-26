@@ -101,21 +101,22 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     logger: false,
   })
 
-  try {
-    await client.connect()
-  } catch (e: any) {
-    throw new Error(`IMAP connect failed (${params.host}:${params.port} user=${params.user}): ${e?.message || e}`)
-  }
+  await client.connect()
   try {
     const lock = await client.getMailboxLock(params.folder)
     try {
-      // Search unseen emails from Vibra sender
       const searchCriteria: any = { seen: false }
       if (params.senderFilter) searchCriteria.from = params.senderFilter
 
       const messages = client.fetch(searchCriteria, { source: true, uid: true, envelope: true })
 
+      let scanned = 0
+      const MAX_SCAN = 5
+
       for await (const msg of messages) {
+        scanned++
+        if (scanned > MAX_SCAN) break
+
         // If subject filter configured, check subject
         if (params.subjectFilter && !msg.envelope?.subject?.includes(params.subjectFilter)) {
           continue
@@ -148,7 +149,7 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
       lock.release()
     }
   } finally {
-    await client.logout()
+    try { await client.logout() } catch {}
   }
 
   return { precos, emailsProcessados, restantes }
