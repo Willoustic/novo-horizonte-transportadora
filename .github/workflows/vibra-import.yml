@@ -1,0 +1,30 @@
+name: Importação Preços Vibra
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 08:00 BRT (11:00 UTC)
+  workflow_dispatch: {}
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disparar importação (loop até não haver mais e-mails)
+        run: |
+          for i in $(seq 1 10); do
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+              https://nh-transportadora.vercel.app/api/cotacoes/importar-vibra)
+            echo "$RESPONSE"
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "Falha na importação (HTTP $HTTP_CODE)"
+              exit 1
+            fi
+            RESTANTES=$(echo "$RESPONSE" | grep -o '"restantes":[0-9]*' | cut -d: -f2)
+            if [ "$RESTANTES" = "0" ]; then
+              echo "Todos os e-mails processados."
+              break
+            fi
+            echo "Restam $RESTANTES e-mails. Continuando..."
+          done
