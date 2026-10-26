@@ -89,6 +89,10 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     throw new Error("Parâmetros IMAP não configurados")
   }
 
+  const precos: VibraPreco[] = []
+  let emailsProcessados = 0
+  let restantes = 0
+
   const client = new ImapFlow({
     host: params.host,
     port: params.port,
@@ -96,10 +100,6 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     auth: { user: params.user, pass: params.password },
     logger: false,
   })
-
-  const precos: VibraPreco[] = []
-  let emailsProcessados = 0
-  let restantes = 0
 
   await client.connect()
   try {
@@ -110,7 +110,6 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
       if (params.senderFilter) searchCriteria.from = params.senderFilter
 
       const messages = client.fetch(searchCriteria, { source: true, uid: true, envelope: true })
-      let processedOne = false
 
       for await (const msg of messages) {
         // If subject filter configured, check subject
@@ -133,7 +132,6 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
         // Mark as read
         await client.messageFlagsAdd(msg.uid, ["\\Seen"], { uid: true })
         emailsProcessados++
-        processedOne = true
 
         // Process only one email per call (Vercel 10s limit)
         break
