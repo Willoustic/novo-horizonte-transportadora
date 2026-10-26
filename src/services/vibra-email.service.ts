@@ -55,7 +55,6 @@ function parseXlsBuffer(buffer: Buffer): VibraPreco[] {
 
   const precos: VibraPreco[] = []
   for (const row of rows) {
-    // Try common column names from Vibra DETA file
     const base = row["Base"] || row["BASE"] || row["base"] || row["Posto"] || row["POSTO"] || ""
     const combustivel = row["Combustivel"] || row["COMBUSTIVEL"] || row["combustivel"] || row["Produto"] || row["PRODUTO"] || ""
     const precoRaw = row["Preco"] || row["PRECO"] || row["preco"] || row["Preço"] || row["Valor"] || row["VALOR"] || ""
@@ -69,7 +68,6 @@ function parseXlsBuffer(buffer: Buffer): VibraPreco[] {
 
     let dataReferencia = new Date().toISOString().split("T")[0]
     if (dataRaw) {
-      // Try parse dd/mm/yyyy or yyyy-mm-dd
       const ddmmyyyy = String(dataRaw).match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
       if (ddmmyyyy) {
         dataReferencia = `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`
@@ -101,7 +99,11 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     logger: false,
   })
 
-  await client.connect()
+  // Timeout wrapper to prevent hanging
+  const timeout = (ms: number) => new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Timeout após ${ms}ms`)), ms))
+
+  await Promise.race([client.connect(), timeout(8000)])
+
   try {
     const lock = await client.getMailboxLock(params.folder)
     try {
@@ -110,14 +112,7 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
 
       const messages = client.fetch(searchCriteria, { source: true, uid: true, envelope: true })
 
-      let scanned = 0
-      const MAX_SCAN = 5
-
       for await (const msg of messages) {
-        scanned++
-        if (scanned > MAX_SCAN) break
-
-        // If subject filter configured, check subject
         if (params.subjectFilter && !msg.envelope?.subject?.includes(params.subjectFilter)) {
           continue
         }
@@ -134,15 +129,12 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
           precos.push(...extracted)
         }
 
-        // Mark as read
         await client.messageFlagsAdd(msg.uid, ["\\Seen"], { uid: true })
         emailsProcessados++
 
-        // Process only one email per call (Vercel 10s limit)
         break
       }
 
-      // Count remaining unseen
       const st = await client.status(params.folder, { messages: true, unseen: true })
       restantes = (st as any).unseen || 0
     } finally {
