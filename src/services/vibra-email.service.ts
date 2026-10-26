@@ -109,7 +109,7 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
       const searchCriteria: any = { seen: false }
       if (params.senderFilter) searchCriteria.from = params.senderFilter
 
-      const messages = client.fetch(searchCriteria, { source: true, uid: true })
+      const messages = client.fetch(searchCriteria, { source: true, uid: true, envelope: true })
       let processedOne = false
 
       for await (const msg of messages) {
