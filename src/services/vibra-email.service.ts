@@ -33,7 +33,6 @@ async function loadImapParams(): Promise<ParametrosImap> {
     map[p.chave] = p.valor
   }
 
-  // Decrypt sensitive fields
   const password = map.imap_password ? decrypt(map.imap_password) : ""
 
   return {
@@ -81,6 +80,9 @@ function parseXlsBuffer(buffer: Buffer): VibraPreco[] {
   return precos
 }
 
+const withTimeout = <T>(p: Promise<T>, ms: number, label: string): Promise<T> =>
+  Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout em ${label} após ${ms}ms`)), ms))])
+
 export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emailsProcessados: number; restantes: number }> {
   const params = await loadImapParams()
   if (!params.host || !params.user || !params.password) {
@@ -99,43 +101,46 @@ export async function fetchVibraEmails(): Promise<{ precos: VibraPreco[]; emails
     logger: false,
   })
 
-  // Timeout wrapper to prevent hanging
-  const timeout = (ms: number) => new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Timeout após ${ms}ms`)), ms))
-
-  await Promise.race([client.connect(), timeout(8000)])
+  await withTimeout(client.connect(), 8000, "connect")
 
   try {
-    const lock = await client.getMailboxLock(params.folder)
+    const lock = await withTimeout(client.getMailboxLock(params.folder), 5000, "getMailboxLock")
     try {
       const searchCriteria: any = { seen: false }
       if (params.senderFilter) searchCriteria.from = params.senderFilter
 
-      const messages = client.fetch(searchCriteria, { source: true, uid: true, envelope: true })
-
-      for await (const msg of messages) {
-        if (params.subjectFilter && !msg.envelope?.subject?.includes(params.subjectFilter)) {
-          continue
-        }
-
-        const parsed = await simpleParser(msg.source as any)
-        const attachments = parsed.attachments || []
-
-        for (const att of attachments) {
-          const filename = att.filename || ""
-          if (!/^DETA_2_.*\.XLS$/i.test(filename) && !/\.XLS$/i.test(filename)) continue
-
-          const buffer = att.content as Buffer
-          const extracted = parseXlsBuffer(buffer)
-          precos.push(...extracted)
-        }
-
-        await client.messageFlagsAdd(msg.uid, ["\\Seen"], { uid: true })
-        emailsProcessados++
-
-        break
+      const uids = await withTimeout(client.search(searchCriteria, { uid: true }), 5000, "search")
+      if (!uids || uids.length === 0) {
+        const st = await withTimeout(client.status(params.folder, { messages: true, unseen: true }), 5000, "status")
+        restantes = (st as any).unseen || 0
+        return { precos, emailsProcessados, restantes }
       }
 
-      const st = await client.status(params.folder, { messages: true, unseen: true })
+      const uid = uids[0]
+
+      const msg = await withTimeout(client.fetchOne(uid, { source: true, envelope: true, uid: true }, { uid: true }), 8000, "fetchOne")
+
+      if (msg) {
+        const subject = msg.envelope?.subject || ""
+        if (!params.subjectFilter || subject.includes(params.subjectFilter)) {
+          const parsed = await withTimeout(simpleParser(msg.source as any), 8000, "simpleParser")
+          const attachments = parsed.attachments || []
+
+          for (const att of attachments) {
+            const filename = att.filename || ""
+            if (!/^DETA_2_.*\.XLS$/i.test(filename) && !/\.XLS$/i.test(filename)) continue
+
+            const buffer = att.content as Buffer
+            const extracted = parseXlsBuffer(buffer)
+            precos.push(...extracted)
+          }
+
+          await withTimeout(client.messageFlagsAdd(uid, ["\\Seen"], { uid: true }), 5000, "messageFlagsAdd")
+          emailsProcessados++
+        }
+      }
+
+      const st = await withTimeout(client.status(params.folder, { messages: true, unseen: true }), 5000, "status")
       restantes = (st as any).unseen || 0
     } finally {
       lock.release()
