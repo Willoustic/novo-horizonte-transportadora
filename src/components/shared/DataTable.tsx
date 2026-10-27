@@ -64,9 +64,8 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
   if (loading) return <div className="text-center py-12 text-gray-500 dark:text-gray-400">Carregando...</div>
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
-      <div className="max-h-[70vh] overflow-y-auto">
-        <Table className="min-w-full">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-auto max-h-[70vh]">
+      <Table className="min-w-full">
           <TableHeader className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
