@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { Sidebar } from "@/components/layout/Sidebar"
 
 export default async function DashboardLayout({
   children,
@@ -15,22 +16,10 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 p-4">
-        <h2 className="text-lg font-bold text-green-600 mb-6">
-          Novo Horizonte
-        </h2>
-        <nav className="space-y-1">
-          <a href="/" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Dashboard</a>
-          <a href="/pedidos" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Pedidos</a>
-          <a href="/carregamentos" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Carregamentos</a>
-          <a href="/estoque" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Estoque</a>
-          <a href="/emprestimos" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Emprestimos</a>
-          <a href="/cotacoes" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Cotacoes</a>
-          <a href="/cadastros" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Cadastros</a>
-          <a href="/parametros" className="block px-3 py-2 rounded-lg text-sm hover:bg-green-50 text-gray-700">Parametros</a>
-        </nav>
-      </aside>
-      <main className="ml-64 p-6">{children}</main>
+      <Sidebar />
+      <main className="md:ml-64 pt-14 md:pt-0 p-4 md:p-6 min-h-screen">
+        {children}
+      </main>
     </div>
   )
 }

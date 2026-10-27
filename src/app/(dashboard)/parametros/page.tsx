@@ -10,7 +10,7 @@ interface Parametro {
   descricao: string | null
 }
 
-const GRUPOS = ["vibra", "gmail", "geral"]
+const GRUPOS = ["vibra", "gmail", "whatsapp", "geral"]
 
 const FILIAIS = [
   { abrev: "PNH2-ZN", nome: "PNH2-ZN" },
@@ -25,6 +25,7 @@ export default function ParametrosPage() {
   const [editing, setEditing] = useState<Parametro | null>(null)
   const [form, setForm] = useState({ grupo: "vibra", chave: "", valor: "", descricao: "" })
   const [showValue, setShowValue] = useState(false)
+  const [activeGroup, setActiveGroup] = useState<string>("vibra")
 
   async function fetchData() {
     setLoading(true)
@@ -69,7 +70,7 @@ export default function ParametrosPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Parametros</h1>
         <button
-          onClick={() => { setEditing(null); setForm({ grupo: "vibra", chave: "", valor: "", descricao: "" }); setModalOpen(true) }}
+          onClick={() => { setEditing(null); setForm({ grupo: activeGroup, chave: "", valor: "", descricao: "" }); setModalOpen(true) }}
           className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
         >
           + Novo
@@ -79,40 +80,59 @@ export default function ParametrosPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-500">Carregando...</div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-          <table className="w-full min-w-[600px]">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chave</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descricao</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acoes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {data.length === 0 ? (
+        <div className="space-y-4">
+          {/* Abas por grupo */}
+          <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
+            {GRUPOS.map((g) => (
+              <button
+                key={g}
+                onClick={() => setActiveGroup(g)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeGroup === g
+                    ? "border-green-600 text-green-700"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {g.charAt(0).toUpperCase() + g.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">Nenhum parametro encontrado</td>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chave</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descricao</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acoes</th>
                 </tr>
-              ) : (
-                data.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-700">{row.grupo}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{row.chave}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 font-mono">
-                      {isSensitive(row.chave) ? "••••••••" : row.valor}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{row.descricao || "-"}</td>
-                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                      <button onClick={() => handleEdit(row)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Editar</button>
-                      <button onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Excluir</button>
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {data.filter((r) => r.grupo === activeGroup).length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">Nenhum parametro encontrado</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  data
+                    .filter((r) => r.grupo === activeGroup)
+                    .map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-700">{row.chave}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 font-mono">
+                          {isSensitive(row.chave) ? "••••••••" : row.valor}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{row.descricao || "-"}</td>
+                        <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                          <button onClick={() => handleEdit(row)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Editar</button>
+                          <button onClick={() => handleDelete(row.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Excluir</button>
+                        </td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
