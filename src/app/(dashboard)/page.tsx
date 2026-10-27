@@ -36,12 +36,14 @@ export default function DashboardPage() {
       
       try {
         // Buscando contagens para cada módulo na data selecionada
-        const [resPedidos, resCarreg, resEstoque, resEmpres, resCotacoes] = await Promise.all([
+        const start = `${dateStr}T00:00:00.000Z`
+const end = `${dateStr}T23:59:59.999Z`
+const [resPedidos, resCarreg, resEstoque, resEmpres, resCotacoes] = await Promise.all([
           supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('data', dateStr),
-          supabase.from('carregamentos').select('id', { count: 'exact', head: true }).eq('data', dateStr),
-          supabase.from('movimentacoes_estoque').select('id', { count: 'exact', head: true }).eq('data', dateStr),
-          supabase.from('emprestimos').select('id', { count: 'exact', head: true }).eq('data', dateStr),
-          supabase.from('cotacoes').select('id', { count: 'exact', head: true }).eq('data', dateStr),
+          supabase.from('carregamentos').select('id', { count: 'exact', head: true }).gte('created_at', start).lte('created_at', end),
+          supabase.from('movimentacoes_estoque').select('id', { count: 'exact', head: true }).gte('data', start).lte('data', end),
+          supabase.from('emprestimos').select('id', { count: 'exact', head: true }).eq('data_emprestimo', dateStr),
+          supabase.from('cotacoes').select('id', { count: 'exact', head: true }).gte('data_registro', start).lte('data_registro', end),
         ])
 
         setStats({

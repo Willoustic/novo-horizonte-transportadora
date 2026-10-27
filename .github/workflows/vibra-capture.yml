@@ -4,7 +4,11 @@ on:
   schedule:
     - cron: "0 11,15 * * *"  # 08:00 e 12:00 BRT (UTC-3)
   workflow_dispatch:
-
+    inputs:
+      posto:
+        description: "Posto abreviacao ou ALL"
+        required: false
+        default: "ALL"
 jobs:
   capture:
     runs-on: ubuntu-latest
@@ -27,4 +31,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-        run: npx tsx scripts/vibra-capture.ts
+        run: |
+          if [ "${{ github.event.inputs.posto }}" != "" ] && [ "${{ github.event.inputs.posto }}" != "ALL" ]; then
+            npx tsx scripts/vibra-capture.ts --posto=${{ github.event.inputs.posto }}
+          else
+            npx tsx scripts/vibra-capture.ts
+          fi
