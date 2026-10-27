@@ -37,10 +37,23 @@ export default function CotacoesPage() {
       fetch("/api/cadastros/combustiveis"),
       fetch("/api/cadastros/fornecedores"),
     ])
-    setCotacoes(await cotRes.json())
-    setPostos(await postosRes.json())
-    setCombustiveis(await combRes.json())
-    setFornecedores(await fornRes.json())
+    const responses = [cotRes, postosRes, combRes, fornRes]
+    for (const res of responses) {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert("Erro ao carregar dados: " + (err?.error || "erro desconhecido"))
+        setLoading(false)
+        return
+      }
+    }
+    const cotJson = await cotRes.json().catch(() => null)
+    const postosJson = await postosRes.json().catch(() => null)
+    const combJson = await combRes.json().catch(() => null)
+    const fornJson = await fornRes.json().catch(() => null)
+    setCotacoes(Array.isArray(cotJson) ? cotJson : [])
+    setPostos(Array.isArray(postosJson) ? postosJson : [])
+    setCombustiveis(Array.isArray(combJson) ? combJson : [])
+    setFornecedores(Array.isArray(fornJson) ? fornJson : [])
     setLoading(false)
   }
 
