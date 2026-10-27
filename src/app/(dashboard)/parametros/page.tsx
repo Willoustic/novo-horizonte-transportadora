@@ -12,6 +12,12 @@ interface Parametro {
 
 const GRUPOS = ["vibra", "gmail", "geral"]
 
+const FILIAIS = [
+  { abrev: "PNH2-ZN", nome: "PNH2-ZN" },
+  { abrev: "PNH1-ZS", nome: "PNH1-ZS" },
+  { abrev: "VITORIA", nome: "VITORIA" },
+]
+
 export default function ParametrosPage() {
   const [data, setData] = useState<Parametro[]>([])
   const [loading, setLoading] = useState(true)

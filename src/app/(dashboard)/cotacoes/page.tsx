@@ -22,6 +22,10 @@ export default function CotacoesPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [modalOpen, setModalOpen] = useState(false)
+  const [vibraModalOpen, setVibraModalOpen] = useState(false)
+  const [selectedPosto, setSelectedPosto] = useState<string>("")
+  const [capturing, setCapturing] = useState(false)
+  const [msg, setMsg] = useState("")
   const [form, setForm] = useState({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() })
 
   async function fetchData() {
@@ -59,6 +63,30 @@ export default function CotacoesPage() {
     fetchData()
   }
 
+  async function handleVibraCapture() {
+    if (!selectedPosto) return
+    setCapturing(true)
+    setMsg(`Capturando posto ${selectedPosto}...`)
+    try {
+      const res = await fetch("/api/vibra/capturar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posto: selectedPosto }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setMsg(`Captura concluida.`)
+        fetchData()
+      } else {
+        setMsg("Erro: " + (json.error || "desconhecido"))
+      }
+    } catch {
+      setMsg("Erro de rede")
+    } finally {
+      setCapturing(false)
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Deseja realmente excluir esta cotação?")) return
     const res = await fetch(`/api/cotacoes/${id}`, { method: "DELETE" })
@@ -77,9 +105,14 @@ export default function CotacoesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Cotações</h1>
           <DatePicker date={selectedDate} onChange={setSelectedDate} />
         </div>
-        <button onClick={() => { setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
-          + Nova Cotação
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => { setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+            + Nova Cotação
+          </button>
+          <button onClick={() => setVibraModalOpen(true)} disabled={capturing} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50">
+            {capturing ? "Capturando..." : "Capturar Vibra"}
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -120,6 +153,31 @@ export default function CotacoesPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {msg && <div className="text-sm text-gray-600">{msg}</div>}
+
+      {vibraModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Captura manual Vibra</h2>
+              <button onClick={() => setVibraModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <select value={selectedPosto} onChange={(e) => setSelectedPosto(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4">
+              <option value="">Selecione o posto</option>
+              <option value="PNH2-ZN">PNH2-ZN</option>
+              <option value="PNH1-ZS">PNH1-ZS</option>
+              <option value="VITORIA">VITORIA</option>
+            </select>
+            <div className="flex justify-end space-x-2">
+              <button type="button" onClick={() => setVibraModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button type="button" onClick={() => { setVibraModalOpen(false); handleVibraCapture() }} disabled={!selectedPosto || capturing} className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50">
+                {capturing ? "Capturando..." : "OK"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
