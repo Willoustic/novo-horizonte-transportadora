@@ -53,7 +53,7 @@ export default function EstoquePage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Estoque</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Estoque</h1>
           <DatePicker date={selectedDate} onChange={setSelectedDate} />
         </div>
         <button onClick={() => { setForm({ tanque_posto_id: "", volume: 0, data: selectedDate }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
@@ -62,7 +62,7 @@ export default function EstoquePage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Carregando...</div>
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">Carregando...</div>
       ) : (
         <DataTable
           columns={[
@@ -91,29 +91,29 @@ export default function EstoquePage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md shadow-xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Registrar Volume</h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Registrar Volume</h2>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tanque do Posto</label>
-                <select value={form.tanque_posto_id} onChange={(e) => setForm({ ...form, tanque_posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Tanque do Posto</label>
+                <select value={form.tanque_posto_id} onChange={(e) => setForm({ ...form, tanque_posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                   <option value="">Selecione...</option>
                   {tanques.map((t) => (<option key={t.id} value={t.id}>Tanque {t.numero}</option>))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Volume (L)</label>
-                <input type="number" value={form.volume} onChange={(e) => setForm({ ...form, volume: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Volume (L)</label>
+                <input type="number" value={form.volume} onChange={(e) => setForm({ ...form, volume: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Data</label>
                 <DatePicker date={form.data} onChange={(d) => setForm({ ...form, data: d })} />
               </div>
               <div className="flex justify-end space-x-2 pt-4">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:text-gray-100">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Salvar</button>
               </div>
             </form>

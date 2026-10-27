@@ -22,7 +22,7 @@ interface DatePickerProps {
 export function DatePicker({ date, onChange, label }: DatePickerProps) {
   return (
     <div className="flex flex-col gap-2">
-      {label && <label className="text-sm font-medium text-gray-600">{label}</label>}
+      {label && <label className="text-sm font-medium text-gray-600 dark:text-gray-300">{label}</label>}
       <Popover>
         <PopoverTrigger asChild>
           <Button

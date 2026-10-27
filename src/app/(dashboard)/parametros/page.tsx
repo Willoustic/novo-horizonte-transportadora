@@ -98,7 +98,7 @@ export default function ParametrosPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Carregando...</div>
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">Carregando...</div>
       ) : (
         <div className="space-y-4">
           {/* Abas por posto */}
@@ -110,7 +110,7 @@ export default function ParametrosPage() {
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activePosto === p.id
                     ? "border-green-600 text-green-700 dark:text-green-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 }`}
               >
                 {p.label}
@@ -127,7 +127,7 @@ export default function ParametrosPage() {
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeGroup === g
                       ? "border-green-600 text-green-700 dark:text-green-400"
-                      : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                   }`}
                 >
                   {g.charAt(0).toUpperCase() + g.slice(1)}
@@ -140,16 +140,16 @@ export default function ParametrosPage() {
             <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chave</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descricao</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acoes</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Chave</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descricao</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acoes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {visible.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">Nenhum parametro encontrado</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Nenhum parametro encontrado</td>
                   </tr>
                 ) : (
                   visible.map((row) => (
@@ -181,7 +181,7 @@ export default function ParametrosPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave</label>
                 <input value={form.chave} onChange={(e) => setForm({ ...form, chave: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" required />
                 {activePosto !== "GLOBAL" && (
-                  <p className="text-xs text-gray-500 mt-1">Sera salvo como: {activePosto}_{form.chave || "..."}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Sera salvo como: {activePosto}_{form.chave || "..."}</p>
                 )}
               </div>
               <div>

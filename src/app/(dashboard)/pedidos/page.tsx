@@ -135,7 +135,7 @@ export default function PedidosPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Pedidos</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pedidos</h1>
           <DatePicker 
             date={selectedDate} 
             onChange={setSelectedDate} 
@@ -150,34 +150,34 @@ export default function PedidosPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Carregando...</div>
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">Carregando...</div>
       ) : (
         <div className="space-y-4">
           {pedidos.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500">
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">
               Não há pedidos para o dia {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
             </div>
           ) : (
             pedidos.map((pedido) => (
-              <div key={pedido.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative group">
+              <div key={pedido.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <div className="bg-green-50 p-2 rounded-lg">
                       <ClipboardList className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{pedido.posto?.abreviacao || pedido.posto_id}</h3>
-                      <p className="text-xs text-gray-500">Criado em: {new Date(pedido.created_at).toLocaleString("pt-BR")}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{pedido.posto?.abreviacao || pedido.posto_id}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Criado em: {new Date(pedido.created_at).toLocaleString("pt-BR")}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status] || "bg-gray-100 text-gray-800"}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[pedido.status] || "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100"}`}>
                       {STATUS_LABELS[pedido.status] || pedido.status}
                     </span>
                     <select
                       value={pedido.status}
                       onChange={(e) => handleStatusChange(pedido.id, e.target.value)}
-                      className="text-xs border border-gray-300 rounded-lg px-2 py-1 bg-white"
+                      className="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-900"
                     >
                       {Object.entries(STATUS_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>
@@ -193,15 +193,15 @@ export default function PedidosPage() {
                   </div>
                 </div>
                 {pedido.observacoes && (
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg border-l-4 border-gray-300">
-                    <p className="text-sm text-gray-600">{pedido.observacoes}</p>
+                  <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border-l-4 border-gray-300 dark:border-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{pedido.observacoes}</p>
                   </div>
                 )}
                 {pedido.itens && pedido.itens.length > 0 && (
                   <div className="overflow-hidden rounded-lg border border-gray-100">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr className="text-gray-500 text-left">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr className="text-gray-500 dark:text-gray-400 text-left">
                           <th className="px-3 py-2 font-medium">Combustivel</th>
                           <th className="px-3 py-2 font-medium">Fornecedor</th>
                           <th className="px-3 py-2 text-right font-medium">Qtd (L)</th>
@@ -210,7 +210,7 @@ export default function PedidosPage() {
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {pedido.itens.map((item: any, idx: number) => (
-                          <tr key={idx} className="hover:bg-gray-50">
+                          <tr key={idx} className="hover:bg-gray-50 dark:bg-gray-800">
                             <td className="px-3 py-2">{item.combustivel?.abreviacao || item.combustivel_id}</td>
                             <td className="px-3 py-2">{item.fornecedor?.nome || item.fornecedor_id}</td>
                             <td className="px-3 py-2 text-right">{item.quantidade_litros?.toLocaleString("pt-BR")}</td>
@@ -229,22 +229,22 @@ export default function PedidosPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Novo Pedido</h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Novo Pedido</h2>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Posto</label>
-                  <select value={form.posto_id} onChange={(e) => setForm({ ...form, posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Posto</label>
+                  <select value={form.posto_id} onChange={(e) => setForm({ ...form, posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                     <option value="">Selecione...</option>
                     {postos.map((p) => (<option key={p.id} value={p.id}>{p.abreviacao} - {p.nome}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data do Pedido</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Data do Pedido</label>
                   <DatePicker 
                     date={form.data} 
                     onChange={(d) => setForm({ ...form, data: d })} 
@@ -252,29 +252,29 @@ export default function PedidosPage() {
                 </div>
               </div>
 
-              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-800">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
                   <Plus className="h-4 w-4" /> Adicionar Itens
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                  <select value={newItem.combustivel_id} onChange={(e) => setNewItem({ ...newItem, combustivel_id: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <select value={newItem.combustivel_id} onChange={(e) => setNewItem({ ...newItem, combustivel_id: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900">
                       <option value="">Combustivel</option>
                       {combustiveis.map((c) => (<option key={c.id} value={c.id}>{c.abreviacao}</option>))}
                   </select>
-                  <input type="number" placeholder="Qtd (L)" value={newItem.quantidade_litros || ""} onChange={(e) => setNewItem({ ...newItem, quantidade_litros: parseFloat(e.target.value) })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                  <select value={newItem.fornecedor_id} onChange={(e) => setNewItem({ ...newItem, fornecedor_id: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <input type="number" placeholder="Qtd (L)" value={newItem.quantidade_litros || ""} onChange={(e) => setNewItem({ ...newItem, quantidade_litros: parseFloat(e.target.value) })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
+                  <select value={newItem.fornecedor_id} onChange={(e) => setNewItem({ ...newItem, fornecedor_id: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900">
                       <option value="">Fornecedor</option>
                       {fornecedores.map((f) => (<option key={f.id} value={f.id}>{f.nome}</option>))}
                   </select>
-                  <input type="number" step="0.01" placeholder="Preco Unit." value={newItem.preco_unitario || ""} onChange={(e) => setNewItem({ ...newItem, preco_unitario: parseFloat(e.target.value) })} className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  <input type="number" step="0.01" placeholder="Preco Unit." value={newItem.preco_unitario || ""} onChange={(e) => setNewItem({ ...newItem, preco_unitario: parseFloat(e.target.value) })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
                 </div>
                 <button type="button" onClick={addItem} className="text-sm text-green-600 font-medium hover:text-green-800 transition-colors">+ Adicionar Item</button>
 
                 {form.itens.length > 0 && (
-                  <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr className="text-gray-500 text-left">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr className="text-gray-500 dark:text-gray-400 text-left">
                           <th className="px-3 py-2 font-medium">Combustivel</th>
                           <th className="px-3 py-2 font-medium">Fornecedor</th>
                           <th className="px-3 py-2 text-right font-medium">Qtd</th>
@@ -287,7 +287,7 @@ export default function PedidosPage() {
                           const comb = combustiveis.find((c) => c.id === item.combustivel_id)
                           const forn = fornecedores.find((f) => f.id === item.fornecedor_id)
                           return (
-                            <tr key={idx} className="hover:bg-gray-50">
+                            <tr key={idx} className="hover:bg-gray-50 dark:bg-gray-800">
                               <td className="px-3 py-2">{comb?.abreviacao}</td>
                               <td className="px-3 py-2">{forn?.nome}</td>
                               <td className="px-3 py-2 text-right">{item.quantidade_litros}</td>
@@ -307,12 +307,12 @@ export default function PedidosPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-                <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Observações</label>
+                <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" rows={2} />
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:text-gray-100 transition-colors">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm">Criar Pedido</button>
               </div>
             </form>

@@ -116,7 +116,7 @@ export default function CotacoesPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Cotações</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cotações</h1>
           <DatePicker date={selectedDate} onChange={setSelectedDate} />
         </div>
         <div className="flex gap-2">
@@ -130,7 +130,7 @@ export default function CotacoesPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Carregando...</div>
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">Carregando...</div>
       ) : (
         <DataTable
           columns={[
@@ -152,16 +152,16 @@ export default function CotacoesPage() {
         />
       )}
 
-      {msg && <div className="text-sm text-gray-600">{msg}</div>}
+      {msg && <div className="text-sm text-gray-600 dark:text-gray-300">{msg}</div>}
 
       {vibraModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Captura manual Vibra</h2>
-              <button onClick={() => setVibraModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Captura manual Vibra</h2>
+              <button onClick={() => setVibraModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">✕</button>
             </div>
-            <select value={selectedPosto} onChange={(e) => setSelectedPosto(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4">
+            <select value={selectedPosto} onChange={(e) => setSelectedPosto(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-4">
               <option value="">Selecione o posto</option>
               <option value="ALL">Todos</option>
               <option value="PNH2-ZN">PNH2-ZN</option>
@@ -169,7 +169,7 @@ export default function CotacoesPage() {
               <option value="VITORIA">VITORIA</option>
             </select>
             <div className="flex justify-end space-x-2">
-              <button type="button" onClick={() => setVibraModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button type="button" onClick={() => setVibraModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:text-gray-100">Cancelar</button>
               <button type="button" onClick={() => { setVibraModalOpen(false); handleVibraCapture() }} disabled={capturing} className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50">
                 {capturing ? "Capturando..." : "OK"}
               </button>
@@ -180,53 +180,53 @@ export default function CotacoesPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Nova Cotação</h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nova Cotação</h2>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Posto</label>
-                  <select value={form.posto_id} onChange={(e) => setForm({ ...form, posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Posto</label>
+                  <select value={form.posto_id} onChange={(e) => setForm({ ...form, posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                     <option value="">Selecione...</option>
                     {postos.map((p) => (<option key={p.id} value={p.id}>{p.abreviacao}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Combustível</label>
-                  <select value={form.combustivel_id} onChange={(e) => setForm({ ...form, combustivel_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Combustível</label>
+                  <select value={form.combustivel_id} onChange={(e) => setForm({ ...form, combustivel_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                     <option value="">Selecione...</option>
                     {combustiveis.map((c) => (<option key={c.id} value={c.id}>{c.abreviacao}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
-                  <select value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Fornecedor</label>
+                  <select value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                     <option value="">Selecione...</option>
                     {fornecedores.map((f) => (<option key={f.id} value={f.id}>{f.nome}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Preço</label>
-                  <input type="number" step="0.0001" value={form.preco} onChange={(e) => setForm({ ...form, preco: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Preço</label>
+                  <input type="number" step="0.0001" value={form.preco} onChange={(e) => setForm({ ...form, preco: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fonte</label>
-                  <select value={form.fonte} onChange={(e) => setForm({ ...form, fonte: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Fonte</label>
+                  <select value={form.fonte} onChange={(e) => setForm({ ...form, fonte: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg">
                     <option value="manual">Manual</option>
                     <option value="vibra">Vibra</option>
                     <option value="whatsapp">WhatsApp</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Data</label>
                   <DatePicker date={form.data} onChange={(d) => setForm({ ...form, data: d })} />
                 </div>
               </div>
               <div className="flex justify-end space-x-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:text-gray-100">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Salvar Cotação</button>
               </div>
             </form>

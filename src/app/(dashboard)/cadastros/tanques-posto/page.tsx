@@ -95,12 +95,12 @@ export default function TanquesPostoPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md shadow-xl">
             <h2 className="text-lg font-bold mb-4">{editing ? "Editar Tanque de Posto" : "Novo Tanque de Posto"}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Posto</label>
-                <select value={form.posto_id} onChange={(e) => setForm({ ...form, posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Posto</label>
+                <select value={form.posto_id} onChange={(e) => setForm({ ...form, posto_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                   <option value="">Selecione...</option>
                   {postos.map((p) => (
                     <option key={p.id} value={p.id}>{p.abreviacao} - {p.nome}</option>
@@ -108,12 +108,12 @@ export default function TanquesPostoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Numero do Tanque</label>
-                <input type="number" value={form.numero} onChange={(e) => setForm({ ...form, numero: parseInt(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Numero do Tanque</label>
+                <input type="number" value={form.numero} onChange={(e) => setForm({ ...form, numero: parseInt(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Combustivel</label>
-                <select value={form.combustivel_id} onChange={(e) => setForm({ ...form, combustivel_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Combustivel</label>
+                <select value={form.combustivel_id} onChange={(e) => setForm({ ...form, combustivel_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                   <option value="">Selecione...</option>
                   {combustiveis.map((c) => (
                     <option key={c.id} value={c.id}>{c.abreviacao} - {c.nome}</option>
@@ -121,15 +121,15 @@ export default function TanquesPostoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacidade (litros)</label>
-                <input type="number" value={form.capacidade_litros} onChange={(e) => setForm({ ...form, capacidade_litros: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Capacidade (litros)</label>
+                <input type="number" value={form.capacidade_litros} onChange={(e) => setForm({ ...form, capacidade_litros: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estoque Minimo (litros)</label>
-                <input type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Estoque Minimo (litros)</label>
+                <input type="number" value={form.estoque_minimo} onChange={(e) => setForm({ ...form, estoque_minimo: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required />
               </div>
               <div className="flex justify-end space-x-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:text-gray-100">Cancelar</button>
                 <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Salvar</button>
               </div>
             </form>
