@@ -12,7 +12,7 @@ import { DataTable } from "@/components/shared/DataTable"
 interface Posto { id: string; nome: string; abreviacao: string }
 interface Combustivel { id: string; nome: string; abreviacao: string }
 interface Fornecedor { id: string; nome: string }
-interface Cotacao { id: string; posto_id: string; combustivel_id: string; fornecedor_id: string; preco: number; fonte: string; data_registro: string; posto?: { nome: string; abreviacao: string }; combustivel?: { nome: string; abreviacao: string }; fornecedor?: { nome: string } }
+interface Cotacao { id: string; posto_id: string; combustivel_id: string; fornecedor_id: string; preco: number; fonte: string; base?: string; data_registro: string; posto?: { nome: string; abreviacao: string }; combustivel?: { nome: string; abreviacao: string }; fornecedor?: { nome: string } }
 
 const FONTES: Record<string, string> = { vibra: "Vibra", whatsapp: "WhatsApp", manual: "Manual" }
 
@@ -137,6 +137,7 @@ export default function CotacoesPage() {
             { accessorKey: "posto", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-", enableColumnFilter: true },
             { accessorKey: "combustivel", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-", enableColumnFilter: true },
             { accessorKey: "fornecedor", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-", enableColumnFilter: true },
+            { accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base || "-", enableColumnFilter: true },
             { accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
             { accessorKey: "fonte", header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
             { accessorKey: "data", header: "Data", cell: ({ row }: any) => new Date(row.original.data_registro).toLocaleDateString("pt-BR") },
