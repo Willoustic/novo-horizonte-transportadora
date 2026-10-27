@@ -24,9 +24,15 @@ export default function EmprestimosPage() {
       fetch("/api/cadastros/combustiveis"),
       fetch("/api/cadastros/postos"),
     ])
-    setEmprestimos(await empRes.json())
-    setCombustiveis(await combRes.json())
-    setPostos(await postosRes.json())
+    const empData = await empRes.json()
+    const combData = await combRes.json()
+    const postosData = await postosRes.json()
+    if (!empRes.ok) alert(empData?.error || "Erro ao carregar emprestimos")
+    if (!combRes.ok) alert(combData?.error || "Erro ao carregar combustiveis")
+    if (!postosRes.ok) alert(postosData?.error || "Erro ao carregar postos")
+    setEmprestimos(Array.isArray(empData) ? empData : [])
+    setCombustiveis(Array.isArray(combData) ? combData : [])
+    setPostos(Array.isArray(postosData) ? postosData : [])
     setLoading(false)
   }
 

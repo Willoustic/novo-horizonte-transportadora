@@ -64,11 +64,21 @@ export default function CarregamentosPage() {
       fetch("/api/cadastros/tanques-carreta"),
       fetch("/api/cadastros/postos"),
     ])
-    setCarregamentos(await carregRes.json())
-    setMotoristas(await motRes.json())
-    setCavalos(await cavRes.json())
-    setTanquesCarreta(await tanqRes.json())
-    setPostos(await postosRes.json())
+    const carregData = await carregRes.json()
+    const motData = await motRes.json()
+    const cavData = await cavRes.json()
+    const tanqData = await tanqRes.json()
+    const postosData = await postosRes.json()
+    if (!carregRes.ok) alert(carregData?.error || "Erro ao carregar carregamentos")
+    if (!motRes.ok) alert(motData?.error || "Erro ao carregar motoristas")
+    if (!cavRes.ok) alert(cavData?.error || "Erro ao carregar cavalos")
+    if (!tanqRes.ok) alert(tanqData?.error || "Erro ao carregar tanques")
+    if (!postosRes.ok) alert(postosData?.error || "Erro ao carregar postos")
+    setCarregamentos(Array.isArray(carregData) ? carregData : [])
+    setMotoristas(Array.isArray(motData) ? motData : [])
+    setCavalos(Array.isArray(cavData) ? cavData : [])
+    setTanquesCarreta(Array.isArray(tanqData) ? tanqData : [])
+    setPostos(Array.isArray(postosData) ? postosData : [])
     setLoading(false)
   }
 

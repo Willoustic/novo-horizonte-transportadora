@@ -11,10 +11,10 @@ export async function GET(request: Request) {
     .select("*, combustivel:combustiveis(nome, abreviacao), posto_origem:postos!posto_origem_id(nome, abreviacao), posto_destino:postos!posto_destino_id(nome, abreviacao)")
 
   if (data) {
-    query = query.eq("data", data)
+    query = query.eq("data_emprestimo", data)
   }
 
-  const { data: emprestimos, error } = await query.order("data", { ascending: false })
+  const { data: emprestimos, error } = await query.order("data_emprestimo", { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(emprestimos)
 }
@@ -40,7 +40,7 @@ export async function DELETE(request: Request) {
 
   const { error } = await supabase
     .from("emprestimos")
-    .update({ ativo: false })
+    .delete()
     .eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

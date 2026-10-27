@@ -11,10 +11,12 @@ export async function GET(request: Request) {
     .select("*, posto_destino:postos(nome, abreviacao), motorista:motoristas(nome), cavalo:cavalos(placa), tanque_carreta:tanques_carreta(identificacao)")
 
   if (data) {
-    query = query.eq("data", data)
+    const start = `${data}T00:00:00.000Z`
+    const end = `${data}T23:59:59.999Z`
+    query = query.gte("created_at", start).lte("created_at", end)
   }
 
-  const { data: carregamentos, error } = await query.order("data", { ascending: false })
+  const { data: carregamentos, error } = await query.order("created_at", { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(carregamentos)
 }
