@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   type ColumnDef,
   flexRender,
@@ -22,23 +22,35 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [sorting, setSorting] = useState<any[]>([])
 
+  // distinct values per column for select filters
+  const distinctValues = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    columns.forEach((c: any) => {
+      const id = c.accessorKey || c.id
+      if (!id) return
+      const vals = Array.from(new Set(data.map((row: any) => {
+        const v = row[id]
+        return v == null ? "" : String(v)
+      }))).filter((v) => v !== "").sort()
+      map[id] = vals
+    })
+    return map
+  }, [data, columns])
+
   const table = useReactTable({
     data,
     columns,
     state: {
-      columnFilters: Object.entries(columnFilters).reduce((acc, [id, value]) => {
-        if (value) acc.push({ id, value })
-        return acc
-      }, [] as any[]),
+      columnFilters: Object.entries(columnFilters)
+        .filter(([, v]) => v)
+        .map(([id, value]) => ({ id, value })),
       sorting,
     },
     onColumnFiltersChange: (updater) => {
-      const next = typeof updater === "function" ? updater(
-        Object.entries(columnFilters).reduce((acc, [id, value]) => {
-          if (value) acc.push({ id, value })
-          return acc
-        }, [] as any[])
-      ) : updater
+      const prev = Object.entries(columnFilters)
+        .filter(([, v]) => v)
+        .map(([id, value]) => ({ id, value }))
+      const next = typeof updater === "function" ? updater(prev) : updater
       const map: Record<string, string> = {}
       next.forEach((f: any) => { map[f.id] = f.value })
       setColumnFilters(map)
@@ -52,55 +64,66 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
   if (loading) return <div className="text-center py-12 text-gray-500 dark:text-gray-400">Carregando...</div>
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-auto max-h-[70vh]">
-      <Table>
-        <TableHeader className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
-          {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id}>
-              {hg.headers.map((h) => (
-                <TableHead key={h.id} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <div className="flex flex-col gap-1">
-                    <button
-                      onClick={h.column.getToggleSortingHandler()}
-                      className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
-                    >
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                      {h.column.getIsSorted() === "asc" ? " ↑" : h.column.getIsSorted() === "desc" ? " ↓" : ""}
-                    </button>
-                    {h.column.getCanFilter() && (
-                      <input
-                        value={(columnFilters[h.column.id] as string) ?? ""}
-                        onChange={(e) => setColumnFilters((p) => ({ ...p, [h.column.id]: e.target.value }))}
-                        placeholder="Filtrar..."
-                        className="text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                      />
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                {emptyMessage || "Nenhum registro encontrado"}
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <div className="max-h-[70vh] overflow-y-auto">
+        <Table className="min-w-full">
+          <TableHeader className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((h) => {
+                  const colId = h.column.id
+                  const canFilter = !!(h.column.columnDef as any).accessorKey
+                  return (
+                    <TableHead key={h.id} className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={h.column.getToggleSortingHandler()}
+                          className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
+                        >
+                          {flexRender(h.column.columnDef.header, h.getContext())}
+                          {h.column.getIsSorted() === "asc" ? " ↑" : h.column.getIsSorted() === "desc" ? " ↓" : ""}
+                        </button>
+                        {canFilter && (
+                          <select
+                            value={columnFilters[colId] ?? ""}
+                            onChange={(e) => setColumnFilters((p) => ({ ...p, [colId]: e.target.value }))}
+                            className="text-xs px-1 py-0.5 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 max-w-[140px]"
+                          >
+                            <option value="">Todos</option>
+                            {(distinctValues[colId] || []).map((v) => (
+                              <option key={v} value={v}>{v}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </TableHead>
+                  )
+                })}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  {emptyMessage || "Nenhum registro encontrado"}
+                </TableCell>
+              </TableRow>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="px-3 py-2 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
