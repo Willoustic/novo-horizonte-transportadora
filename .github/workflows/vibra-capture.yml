@@ -2,7 +2,7 @@ name: Vibra Price Capture
 
 on:
   schedule:
-    - cron: "0 11,15 * * *"  # 08:00 e 12:00 BRT (UTC-3)
+    - cron: "30 10,15 * * *"  # 07:30 e 12:00 BRT (UTC-3)
   workflow_dispatch:
     inputs:
       posto:
