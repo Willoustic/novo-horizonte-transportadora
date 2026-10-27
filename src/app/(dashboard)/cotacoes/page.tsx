@@ -6,6 +6,8 @@ import { ptBR } from "date-fns/locale"
 import { DatePicker } from "@/components/ui/date-picker"
 import { formatDateToDB } from "@/lib/date-utils"
 import { Trash2 } from "lucide-react"
+import { type ColumnDef } from "@tanstack/react-table"
+import { DataTable } from "@/components/shared/DataTable"
 
 interface Posto { id: string; nome: string; abreviacao: string }
 interface Combustivel { id: string; nome: string; abreviacao: string }
@@ -130,42 +132,24 @@ export default function CotacoesPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-500">Carregando...</div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posto</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Combustível</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fornecedor</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Preço</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fonte</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {cotacoes.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Não há cotações para o dia {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</td></tr>
-              ) : (
-                cotacoes.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{c.posto?.abreviacao || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{c.combustivel?.abreviacao || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{c.fornecedor?.nome || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-right font-medium">R$ {c.preco?.toFixed(4)}</td>
-                    <td className="px-4 py-3 text-sm">{FONTES[c.fonte] || c.fonte}</td>
-                    <td className="px-4 py-3 text-sm">{new Date(c.data_registro).toLocaleDateString("pt-BR")}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => handleDelete(c.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Excluir cotação">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { accessorKey: "posto", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-", enableColumnFilter: true },
+            { accessorKey: "combustivel", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-", enableColumnFilter: true },
+            { accessorKey: "fornecedor", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-", enableColumnFilter: true },
+            { accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
+            { accessorKey: "fonte", header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
+            { accessorKey: "data", header: "Data", cell: ({ row }: any) => new Date(row.original.data_registro).toLocaleDateString("pt-BR") },
+            { id: "acoes", header: "Ações", cell: ({ row }: any) => (
+              <button onClick={() => handleDelete(row.original.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Excluir cotação">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ), enableSorting: false, enableColumnFilter: false },
+          ] as ColumnDef<any, any>[]}
+          data={cotacoes}
+          loading={false}
+          emptyMessage={`Não há cotações para o dia ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}`}
+        />
       )}
 
       {msg && <div className="text-sm text-gray-600">{msg}</div>}

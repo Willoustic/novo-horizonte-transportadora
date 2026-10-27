@@ -5,6 +5,8 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Trash2, Plus } from "lucide-react"
+import { type ColumnDef } from "@tanstack/react-table"
+import { DataTable } from "@/components/shared/DataTable"
 import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils"
 
 export default function EmprestimosPage() {
@@ -83,49 +85,31 @@ export default function EmprestimosPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-500">Carregando...</div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Combustivel</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Volume (L)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origem</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Destino</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {emprestimos.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Nenhum emprestimo para o dia {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</td></tr>
-              ) : (
-                emprestimos.map((e) => (
-                  <tr key={e.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{e.combustivel?.abreviacao || "-"}</td>
-                    <td className="px-4 py-3 text-sm text-right">{e.volume?.toLocaleString("pt-BR")}</td>
-                    <td className="px-4 py-3 text-sm">{e.posto_origem?.abreviacao || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{e.posto_destino?.abreviacao || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{formatDateFromDB(e.data_emprestimo)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[e.status] || "bg-gray-100"}`}>{STATUS_LABELS[e.status] || e.status}</span>
-                        <select value={e.status} onChange={(ev) => handleStatusChange(e.id, ev.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1">
-                          {Object.entries(STATUS_LABELS).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
-                        </select>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => handleDelete(e.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { accessorKey: "combustivel", header: "Combustivel", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-", enableColumnFilter: true },
+            { accessorKey: "volume", header: "Volume (L)", cell: ({ row }: any) => row.original.volume?.toLocaleString("pt-BR") },
+            { accessorKey: "origem", header: "Origem", cell: ({ row }: any) => row.original.posto_origem?.abreviacao || "-", enableColumnFilter: true },
+            { accessorKey: "destino", header: "Destino", cell: ({ row }: any) => row.original.posto_destino?.abreviacao || "-", enableColumnFilter: true },
+            { accessorKey: "data", header: "Data", cell: ({ row }: any) => formatDateFromDB(row.original.data_emprestimo) },
+            { accessorKey: "status", header: "Status", cell: ({ row }: any) => (
+              <div className="flex items-center space-x-2">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[row.original.status] || "bg-gray-100"}`}>{STATUS_LABELS[row.original.status] || row.original.status}</span>
+                <select value={row.original.status} onChange={(ev) => handleStatusChange(row.original.id, ev.target.value)} className="text-xs border border-gray-300 rounded-lg px-2 py-1">
+                  {Object.entries(STATUS_LABELS).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                </select>
+              </div>
+            ), enableColumnFilter: true },
+            { id: "acoes", header: "Ações", cell: ({ row }: any) => (
+              <button onClick={() => handleDelete(row.original.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ), enableSorting: false, enableColumnFilter: false },
+          ] as ColumnDef<any, any>[]}
+          data={emprestimos}
+          loading={false}
+          emptyMessage={`Nenhum emprestimo para o dia ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}`}
+        />
       )}
 
       {modalOpen && (
