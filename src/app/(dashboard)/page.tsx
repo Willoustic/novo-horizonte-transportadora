@@ -6,10 +6,10 @@ import { Package, Truck, ClipboardList, DollarSign, Users, Settings, LayoutDashb
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 
-interface LitragemRow { posto: string; combustivel: string; total: number }
+interface LitragemRow { posto: string; combustivel: string; bases: string; total: number }
 interface CarregRow { motorista: string; cavalo: string; tanque: string; total: number }
 interface EstoqueRow { posto: string; combustivel: string; volume: number }
-interface PrecoRow { posto: string; combustivel: string; preco: number }
+interface PrecoRow { posto: string; combustivel: string; base: string; preco: number }
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
@@ -28,17 +28,41 @@ export default function DashboardPage() {
           .from("pedidos")
           .select("id, posto_id, postos(nome, abreviacao), itens_pedido(volume_solicitado, combustivel_id, combustiveis(nome, abreviacao))")
         const litMap: Record<string, number> = {}
+        const pedidoCombMap: Record<string, Set<string>> = {}
         ;(pedidos || []).forEach((p: any) => {
           const posto = p.postos?.abreviacao || p.postos?.nome || "?"
+          const combs = new Set<string>()
           ;(p.itens_pedido || []).forEach((it: any) => {
             const comb = it.combustiveis?.abreviacao || it.combustiveis?.nome || "?"
+            combs.add(comb)
             const key = `${posto}|${comb}`
             litMap[key] = (litMap[key] || 0) + Number(it.volume_solicitado || 0)
           })
+          pedidoCombMap[p.id] = combs
         })
+
+        // bases per posto x combustivel from carregamentos
+        const basesMap: Record<string, Set<string>> = {}
+        const postoById: Record<string, string> = {}
+        const { data: postosAll } = await supabase.from("postos").select("id, abreviacao, nome")
+        ;(postosAll || []).forEach((po: any) => { postoById[po.id] = po.abreviacao || po.nome || "?" })
+        const { data: carregBase } = await supabase.from("carregamentos").select("base_origem, posto_destino_id, pedido_id")
+        ;(carregBase || []).forEach((c: any) => {
+          const posto = postoById[c.posto_destino_id] || "?"
+          const bases = c.base_origem ? String(c.base_origem).split(",").map((s: string) => s.trim()).filter(Boolean) : []
+          const combs = (c.pedido_id && pedidoCombMap[c.pedido_id]) ? Array.from(pedidoCombMap[c.pedido_id]) : []
+          const targetCombs = combs.length ? combs : (bases.length ? ["?"] : [])
+          targetCombs.forEach((comb: string) => {
+            const key = `${posto}|${comb}`
+            if (!basesMap[key]) basesMap[key] = new Set()
+            bases.forEach((b: string) => basesMap[key].add(b))
+          })
+        })
+
         setLitragem(Object.entries(litMap).map(([k, v]) => {
           const [posto, combustivel] = k.split("|")
-          return { posto, combustivel, total: v }
+          const bs = basesMap[k]
+          return { posto, combustivel, bases: bs && bs.size ? Array.from(bs).join(",") : "-", total: v }
         }))
 
         // 2. Carregamento por motorista
@@ -75,19 +99,21 @@ export default function DashboardPage() {
         // 4. Melhor preco por posto x produto (min)
         const { data: cotacoes } = await supabase
           .from("cotacoes")
-          .select("preco, postos(abreviacao, nome), combustiveis(abreviacao, nome)")
-        const precoMap: Record<string, number> = {}
+          .select("preco, base, postos(abreviacao, nome), combustiveis(abreviacao, nome)")
+        const precoMap: Record<string, { preco: number; base: string }> = {}
         ;(cotacoes || []).forEach((c: any) => {
           const posto = c.postos?.abreviacao || c.postos?.nome || "?"
           const comb = c.combustiveis?.abreviacao || c.combustiveis?.nome || "?"
           const key = `${posto}|${comb}`
           const p = Number(c.preco || 0)
-          if (!(key in precoMap) || p < precoMap[key]) precoMap[key] = p
+          const base = c.base || "-"
+          if (!(key in precoMap) || p < precoMap[key].preco) precoMap[key] = { preco: p, base }
         })
-        setPrecos(Object.entries(precoMap).map(([k, v]) => {
+        const precosArr = Object.entries(precoMap).map(([k, v]) => {
           const [posto, combustivel] = k.split("|")
-          return { posto, combustivel, preco: v }
-        }))
+          return { posto, combustivel, base: v.base, preco: v.preco }
+        }).sort((a, b) => a.posto.localeCompare(b.posto))
+        setPrecos(precosArr)
       } catch (e) {
         console.error(e)
       } finally {
@@ -130,14 +156,15 @@ export default function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-gray-500 dark:text-gray-400">
-                  <tr><th className="text-left py-1">Posto</th><th className="text-left py-1">Combustivel</th><th className="text-right py-1">Litros</th></tr>
+                  <tr><th className="text-left py-1">Posto</th><th className="text-left py-1">Combustivel</th><th className="text-left py-1">Bases</th><th className="text-right py-1">Litros</th></tr>
                 </thead>
                 <tbody>
-                  {litragem.length === 0 ? <tr><td colSpan={3} className="text-gray-400 py-2">Sem dados</td></tr> :
+                  {litragem.length === 0 ? <tr><td colSpan={4} className="text-gray-400 py-2">Sem dados</td></tr> :
                     litragem.map((r, i) => (
                       <tr key={i} className="border-t border-gray-100 dark:border-gray-800">
                         <td className="py-1 text-gray-700 dark:text-gray-200">{r.posto}</td>
                         <td className="py-1 text-gray-700 dark:text-gray-200">{r.combustivel}</td>
+                        <td className="py-1 text-gray-700 dark:text-gray-200">{r.bases}</td>
                         <td className="py-1 text-right font-mono text-gray-700 dark:text-gray-200">{r.total.toLocaleString("pt-BR")}</td>
                       </tr>
                     ))}
@@ -206,14 +233,15 @@ export default function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-gray-500 dark:text-gray-400">
-                  <tr><th className="text-left py-1">Posto</th><th className="text-left py-1">Combustivel</th><th className="text-right py-1">Preco</th></tr>
+                  <tr><th className="text-left py-1">Posto</th><th className="text-left py-1">Combustivel</th><th className="text-left py-1">Base</th><th className="text-right py-1">Preco</th></tr>
                 </thead>
                 <tbody>
-                  {precos.length === 0 ? <tr><td colSpan={3} className="text-gray-400 py-2">Sem dados</td></tr> :
+                  {precos.length === 0 ? <tr><td colSpan={4} className="text-gray-400 py-2">Sem dados</td></tr> :
                     precos.map((r, i) => (
                       <tr key={i} className="border-t border-gray-100 dark:border-gray-800">
                         <td className="py-1 text-gray-700 dark:text-gray-200">{r.posto}</td>
                         <td className="py-1 text-gray-700 dark:text-gray-200">{r.combustivel}</td>
+                        <td className="py-1 text-gray-700 dark:text-gray-200">{r.base}</td>
                         <td className="py-1 text-right font-mono text-gray-700 dark:text-gray-200">{r.preco.toFixed(4)}</td>
                       </tr>
                     ))}
