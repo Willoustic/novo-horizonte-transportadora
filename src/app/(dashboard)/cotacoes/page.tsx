@@ -77,9 +77,8 @@ export default function CotacoesPage() {
   }
 
   async function handleVibraCapture() {
-    if (!selectedPosto) return
     setCapturing(true)
-    setMsg(`Capturando posto ${selectedPosto}...`)
+    setMsg(selectedPosto && selectedPosto !== "ALL" ? `Capturando posto ${selectedPosto}...` : "Capturando todos os postos...")
     try {
       const res = await fetch("/api/vibra/capturar", {
         method: "POST",
@@ -180,13 +179,14 @@ export default function CotacoesPage() {
             </div>
             <select value={selectedPosto} onChange={(e) => setSelectedPosto(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4">
               <option value="">Selecione o posto</option>
+              <option value="ALL">Todos</option>
               <option value="PNH2-ZN">PNH2-ZN</option>
               <option value="PNH1-ZS">PNH1-ZS</option>
               <option value="VITORIA">VITORIA</option>
             </select>
             <div className="flex justify-end space-x-2">
               <button type="button" onClick={() => setVibraModalOpen(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancelar</button>
-              <button type="button" onClick={() => { setVibraModalOpen(false); handleVibraCapture() }} disabled={!selectedPosto || capturing} className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50">
+              <button type="button" onClick={() => { setVibraModalOpen(false); handleVibraCapture() }} disabled={capturing} className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50">
                 {capturing ? "Capturando..." : "OK"}
               </button>
             </div>

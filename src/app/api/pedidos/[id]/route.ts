@@ -43,9 +43,10 @@ export async function DELETE(
 ) {
   const { id } = await params
   const supabase = await createClient()
+  await supabase.from("itens_pedido").delete().eq("pedido_id", id)
   const { error } = await supabase
     .from("pedidos")
-    .update({ status: "cancelado" })
+    .delete()
     .eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })

@@ -33,11 +33,28 @@ export async function POST(request: Request) {
   if (pedidoError) return NextResponse.json({ error: pedidoError.message }, { status: 500 })
 
   if (itens && itens.length > 0) {
-    const itensData = itens.map((item: any) => ({
-      pedido_id: pedido.id,
-      combustivel_id: item.combustivel_id,
-      volume_solicitado: item.quantidade_litros,
-    }))
+    const itensData = []
+    for (const item of itens) {
+      const { data: tanque } = await supabase
+        .from("tanques_posto")
+        .select("id")
+        .eq("posto_id", pedido.posto_id)
+        .eq("combustivel_id", item.combustivel_id)
+        .limit(1)
+        .maybeSingle()
+      if (!tanque) {
+        return NextResponse.json(
+          { error: `Tanque não encontrado para combustível ${item.combustivel_id} no posto ${pedido.posto_id}` },
+          { status: 400 }
+        )
+      }
+      itensData.push({
+        pedido_id: pedido.id,
+        combustivel_id: item.combustivel_id,
+        tanque_posto_id: tanque.id,
+        volume_solicitado: item.quantidade_litros,
+      })
+    }
     const { error: itensError } = await supabase.from("itens_pedido").insert(itensData)
     if (itensError) return NextResponse.json({ error: itensError.message }, { status: 500 })
   }
@@ -52,9 +69,10 @@ export async function DELETE(request: Request) {
 
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
 
+  await supabase.from("itens_pedido").delete().eq("pedido_id", id)
   const { error } = await supabase
     .from("pedidos")
-    .update({ ativo: false })
+    .delete()
     .eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
