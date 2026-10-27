@@ -65,8 +65,8 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
       const uids = await client.search({ since }, { uid: true });
       const sortedUids = (uids || []).sort((a, b) => b - a);
       for (const uid of sortedUids) {
-        const msg = await client.fetchOne(uid, { source: true }, { uid: true });
-        if (!msg?.source) continue;
+const msg = await client.fetchOne(uid, { source: true }, { uid: true }) as { source?: Buffer } | false;
+        if (!msg || !msg.source) continue;
         const parsed = await simpleParser(msg.source);
         const subject = parsed.subject || "";
         if (!subject.includes("Código de verificação para autenticação - Vibra Energia")) continue;
