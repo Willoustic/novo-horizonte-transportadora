@@ -125,8 +125,8 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
       await page.fill('input[name="password"]', senha);
       await page.click('input[name="loginBt"]');
       await page.waitForTimeout(3000);
-      console.log("Aguardando 45s para 2FA...");
-      await page.waitForTimeout(45000);
+      console.log("Aguardando 10s para 2FA...");
+      await page.waitForTimeout(10000);
       const since = new Date(Date.now() - 300000);
       const code = await waitFor2FACode(since);
       if (code) {
@@ -241,6 +241,7 @@ async function main() {
   combustivelMap.set("óleo diesel b s10", combustivelMap.get("diesel s10")!);
   combustivelMap.set("gasolina comum c", combustivelMap.get("gasolina comum")!);
   combustivelMap.set("gasolina comum c adit petrobras grid", combustivelMap.get("gasolina aditivada")!);
+  combustivelMap.set("gasolina comum c aditivada", combustivelMap.get("gasolina aditivada")!);
   combustivelMap.set("etanol hidratado combustivel", combustivelMap.get("etanol")!);
 
   // Allow filtering by a single posto via --posto=ABREV
