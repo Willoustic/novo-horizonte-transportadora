@@ -116,14 +116,14 @@ export default function DashboardPage() {
           const posto = c.postos?.abreviacao || c.postos?.nome || "?"
           const comb = c.combustiveis?.abreviacao || c.combustiveis?.nome || "?"
           const base = c.base || "-"
-          const key = `${posto}|${comb}|${base}`
+          const key = `${posto}|${comb}`
           const p = Number(c.preco || 0)
           if (!(key in precoMap) || p < precoMap[key].preco) precoMap[key] = { preco: p, base }
         })
         const precosArr = Object.entries(precoMap).map(([k, v]) => {
-          const [posto, combustivel, base] = k.split("|")
-          return { posto, combustivel, base, preco: v.preco }
-        }).sort((a, b) => a.posto.localeCompare(b.posto) || a.combustivel.localeCompare(b.combustivel) || a.base.localeCompare(b.base))
+          const [posto, combustivel] = k.split("|")
+          return { posto, combustivel, base: v.base, preco: v.preco }
+        }).sort((a, b) => a.posto.localeCompare(b.posto) || a.combustivel.localeCompare(b.combustivel))
         setPrecos(precosArr)
       } catch (e) {
         console.error(e)

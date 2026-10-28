@@ -30,14 +30,23 @@ export async function POST(request: Request) {
 
   const dataRegistro = data_registro ? new Date(data_registro).toISOString() : new Date().toISOString()
 
-  // Check existing
-  const { data: existing } = await supabase
+  // Check existing per (posto_id, combustivel_id, fornecedor_id, base)
+  // so a new capture overwrites the current price for that base instead of duplicating.
+  let existingQuery = supabase
     .from("cotacoes")
     .select("*")
     .eq("posto_id", posto_id)
     .eq("combustivel_id", combustivel_id)
     .eq("fornecedor_id", fornecedor_id)
-    .single()
+
+  if (base == null) {
+    existingQuery = existingQuery.is("base", null)
+  } else {
+    existingQuery = existingQuery.eq("base", base)
+  }
+
+  const { data: existingRows } = await existingQuery
+  const existing = existingRows?.[0]
 
   if (existing) {
     // Record history
