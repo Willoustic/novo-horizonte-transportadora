@@ -39,5 +39,5 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-          EMAIL_USER: ${{ secrets.VIBRA_EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.VIBRA_EMAIL_PASS }}
+          VIBRA_EMAIL_USER: ${{ secrets.VIBRA_EMAIL_USER }}
+          VIBRA_EMAIL_PASS: ${{ secrets.VIBRA_EMAIL_PASS }}
