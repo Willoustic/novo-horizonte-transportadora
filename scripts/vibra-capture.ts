@@ -244,12 +244,14 @@ async function main() {
   combustivelMap.set("gasolina comum c aditivada", combustivelMap.get("gasolina aditivada")!);
   combustivelMap.set("etanol hidratado combustivel", combustivelMap.get("etanol")!);
 
-  // Allow filtering by a single posto via --posto=ABREV
+  // Allow filtering by a single posto via --posto=ABREV.
+  // "ALL" or empty means all active FILIAL postos.
   const postoArg = process.argv.find((a) => a.startsWith("--posto="));
   const postoFilter = postoArg ? postoArg.split("=")[1] : null;
-  const filteredPostos = postoFilter
-    ? (postos || []).filter((p) => p.abreviacao === postoFilter)
-    : (postos || []);
+  const isAllPostos = !postoFilter || postoFilter === "ALL";
+  const filteredPostos = isAllPostos
+    ? (postos || [])
+    : (postos || []).filter((p) => p.abreviacao === postoFilter);
 
   for (const posto of filteredPostos) {
     console.log(`Capturando preços para ${posto.nome}...`);
