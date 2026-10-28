@@ -28,6 +28,7 @@ export default function CotacoesPage() {
   const [selectedPosto, setSelectedPosto] = useState<string>("")
   const [capturing, setCapturing] = useState(false)
   const [msg, setMsg] = useState("")
+  const [captureStatus, setCaptureStatus] = useState<"idle" | "success" | "error">("idle")
   const [form, setForm] = useState({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() })
 
   async function fetchData() {
@@ -80,6 +81,7 @@ export default function CotacoesPage() {
 
   async function handleVibraCapture() {
     setCapturing(true)
+    setCaptureStatus("idle")
     setMsg(selectedPosto && selectedPosto !== "ALL" ? `Capturando posto ${selectedPosto}...` : "Capturando todos os postos...")
     try {
       const res = await fetch("/api/vibra/capturar", {
@@ -89,11 +91,16 @@ export default function CotacoesPage() {
       })
       const json = await res.json()
       if (res.ok) {
-        setMsg(`Captura agendada. Os preços serão atualizados em alguns minutos.`)
+        setCaptureStatus("success")
+        setMsg("Captura agendada com sucesso. Os preços serão atualizados em alguns minutos.")
+        // Atualiza tabela após a captura ser agendada (o GitHub Action ainda roda em background)
+        setTimeout(() => fetchData(), 2000)
       } else {
+        setCaptureStatus("error")
         setMsg("Erro: " + (json.error || "desconhecido"))
       }
     } catch {
+      setCaptureStatus("error")
       setMsg("Erro de rede")
     } finally {
       setCapturing(false)
@@ -174,6 +181,49 @@ export default function CotacoesPage() {
                 {capturing ? "Capturando..." : "OK"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: capturando */}
+      {capturing && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Capturando Vibra...</h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm">
+              {captureStatus === "idle" ? "Aguarde enquanto os preços são capturados." : ""}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: resultado da captura */}
+      {(captureStatus === "success" || captureStatus === "error") && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-sm shadow-2xl text-center">
+            {captureStatus === "success" ? (
+              <>
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-green-600 text-2xl">✓</span>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Captura agendada</h3>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-red-600 text-2xl">✕</span>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Erro na captura</h3>
+              </>
+            )}
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">{msg}</p>
+            <button
+              onClick={() => { setCaptureStatus("idle"); fetchData() }}
+              className={`px-6 py-2 rounded-lg font-medium ${captureStatus === "success" ? "bg-green-600 text-white hover:bg-green-700" : "bg-gray-600 text-white hover:bg-gray-700"}`}
+            >
+              {captureStatus === "success" ? "Atualizar agora" : "Fechar"}
+            </button>
           </div>
         </div>
       )}
