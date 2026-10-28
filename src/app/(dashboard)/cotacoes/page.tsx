@@ -89,8 +89,7 @@ export default function CotacoesPage() {
       })
       const json = await res.json()
       if (res.ok) {
-        setMsg(`Captura concluida.`)
-        fetchData()
+        setMsg(`Captura agendada. Os preços serão atualizados em alguns minutos.`)
       } else {
         setMsg("Erro: " + (json.error || "desconhecido"))
       }
