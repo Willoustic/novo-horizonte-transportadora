@@ -133,9 +133,9 @@ export default function CotacoesPage() {
       ) : (
         <DataTable
           columns={[
-            { accessorKey: "posto", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-", enableColumnFilter: true },
-            { accessorKey: "combustivel", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-", enableColumnFilter: true },
-            { accessorKey: "fornecedor", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-", enableColumnFilter: true },
+            { accessorKey: "posto", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-" },
+            { accessorKey: "combustivel", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-" },
+            { accessorKey: "fornecedor", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-" },
             { accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base || "-", enableColumnFilter: true },
             { accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
             { accessorKey: "fonte", header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
