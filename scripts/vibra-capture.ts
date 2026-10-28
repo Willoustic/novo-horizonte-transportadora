@@ -268,6 +268,7 @@ async function main() {
         .eq("posto_id", posto.id)
         .eq("combustivel_id", combustivelId)
         .eq("fornecedor_id", fornecedorId)
+        .eq("base", p.base)
         .single();
 
       const now = new Date().toISOString();
