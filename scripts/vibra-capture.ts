@@ -160,14 +160,34 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
       console.log(`  ${base}: ${prices.length} preços`);
     }
 
-    // BAGAM (padrão)
+    // BAGAM (padrão) — aguardar base field aparecer no DOM
     await page.waitForTimeout(3000);
+    await waitForEl('div.mat-form-field-flex', 5000).then(() => page.waitForTimeout(1000));
     await captureBase("BAGAM");
+
+    async function waitForEl(selector: string, timeoutMs = 5000) {
+      try {
+        await page.waitForSelector(selector, { timeout: timeoutMs });
+        return await page.$(selector);
+      } catch {
+        return null;
+      }
+    }
 
     async function switchBaseAndCapture(baseName: string) {
       // Clicar no form field para abrir selector
-      const formField = await page.$('div.mat-form-field-flex');
-      if (!formField) { console.log("form-field não encontrado"); return; }
+      const formField = await waitForEl('div.mat-form-field-flex', 5000);
+      if (!formField) {
+        const diag = await page.evaluate(() => ({
+          url: window.location.href,
+          title: document.title,
+          textLen: document.body.innerText.length,
+          text: document.body.innerText.replace(/\s+/g, " ").slice(0, 500),
+        }));
+        console.log(`form-field não encontrado para ${baseName} | url=${diag.url} title=${diag.title} textLen=${diag.textLen}`);
+        console.log(`texto pagina: ${diag.text}`);
+        return;
+      }
       await formField.click({ force: true });
       await page.waitForTimeout(2000);
 
