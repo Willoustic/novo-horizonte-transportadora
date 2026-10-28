@@ -1,7 +1,7 @@
 ﻿# Memory — Novo Horizonte Transportadora de Combustíveis
 
 > Arquivo de memória do projeto. Referencia toda a documentação em /docs.
-> Última atualização: 2026-10-23
+> Última atualização: 2026-10-28
 
 ## Visão Geral
 Sistema web para controle de pedidos, carregamentos, estoque e cotações
@@ -59,21 +59,23 @@ Vibra, Setta, Larco, Petrovia
 - Commits: Conventional Commits (feat:, fix:, docs:, etc.)
 - Branch principal: master
 
-## Status Atual (2026-10-23)
+## Status Atual (2026-10-28)
 
 ### Feito
 - Estrutura de 50 diretórios, configs, 14 docs, Memory.md, Agents.md, README.
-- Migrations: schema (18 tabelas), RLS por perfil, seed (3 filiais, 5 combustíveis, 4 fornecedores).
+- Migrations: schema (18 tabelas), RLS por perfil, seed (3 filiais, 5 combustíveis, 4 fornecedores). Migrações 001-008 aplicadas no Supabase (ref qbltinupgfalplieohwv).
 - Cadastros: API + páginas para postos, combustíveis, fornecedores, motoristas, cavalos, tanques-carreta, tanques-posto (soft-delete).
 - Parâmetros: API + página com criptografia AES-256-GCM.
 - Pedidos: API + página com itens e mudança de status.
 - Carregamentos: API + página com status.
 - Estoque: API (upsert por data) + página com alerta de mínimo.
 - Empréstimos: API + página.
-- Cotações: API (histórico de preços) + página.
-- Dashboard layout com navegação.
+- Cotações: API (histórico de preços) + página com filtros posto/combustível/fornecedor e data em dd/mm/yyyy hh:mm:ss.
+- Dashboard: "Melhor preço por posto" agrupado por posto×combustível×base (menor preço).
 - Type-check (tsc --noEmit) passando.
+- Commit 7dbb0f2 pushado ao GitHub master.
+- Deploy de produção na Vercel: dpl_9iZnP8bP8Zmx4f8V5ReZ76a1K19n, READY, https://nh-transportadora.vercel.app
 
 ### Próximo passo
-- Deploy: criar repositório GitHub, aplicar migrations no Supabase, configurar env vars e publicar na Vercel.
-- Depois: testes E2E e refinamentos de UI (modal de confirmação de preço duplicado, histórico de preços).
+- Testes E2E e refinamentos de UI (modal de confirmação de preço duplicado, histórico de preços).
+- PNH2-ZN Vibra capture: portal não renderiza tabela de preços nem seletor de base (problema de conta/portal Vibra, não de código).
