@@ -63,12 +63,21 @@ Sempre aplicar RLS. Nao pular migrations.
 
 ## vibra-capture (GitHub Actions)
 
-O arquivo `.github/workflows/vibra-capture.yml` **ja existe** (criado neste alinhamento). Disparo:
+Workflow `.github/workflows/vibra-capture.yml` presente e testado via `workflow_dispatch`. Disparo:
 1. GitHub > Actions > vibra-capture > Run workflow.
-2. Informar `posto` (abreviacao, ex: VIT, ZN) ou deixar vazio para todos.
-3. A rota `POST /api/vibra/capturar` tambem dispara o workflow via `GITHUB_TOKEN` + `repository_dispatch`/workflow_dispatch.
+2. Informar `posto` (abreviacao, ex: VIT, ZN) ou deixar vazio/`ALL` para todos os postos FILIAIS ativos.
+3. Informar `data` (YYYY-MM-DD) opcional: a rota `POST /api/vibra/capturar` deleta lançamentos `fonte='vibra'` dessa data antes de disparar a captura.
+4. A rota `POST /api/vibra/capturar` tambem dispara o workflow via `GITHUB_TOKEN` + `workflow_dispatch`.
 
-Segredos necessarios no repo GitHub (lista acima). `VIBRA_EMAIL_USER`/`VIBRA_EMAIL_PASS` lidos via `process.env` em `scripts/vibra-capture.ts`; configurar como secrets do GitHub Actions. Nao commitar credenciais.
+Comportamento do script `scripts/vibra-capture.ts`:
+- `--posto=ALL` ou vazio = todos os postos FILIAIS ativos (nao filtra por abreviacao "ALL").
+- `--posto=ABREV` = filtra por abreviacao do posto.
+- Loga preços capturados por posto e base.
+- Insere/atualiza `cotacoes` (fonte='vibra') e grava `historico_precos` (audit de alteracao de preco).
+
+Segredos necessarios no repo GitHub (lista acima): `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `VIBRA_EMAIL_USER`, `VIBRA_EMAIL_PASS`. Configurar como secrets do GitHub Actions. Nao commitar credenciais.
+
+Producao: https://nh-transportadora.vercel.app (deploy `dpl_GCUNqXwoD2nKQwoCsMacpAn3EnJm`, automatico a cada push em `master`).
 
 ## Procedimentos locais (dev)
 

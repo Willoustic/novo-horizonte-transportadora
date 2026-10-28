@@ -1,5 +1,17 @@
 # 12 - Changelog
 
+## [0.1.2] - 2026-10-28
+### Adicionado
+- `POST /api/vibra/capturar` deleta lançamentos `fonte='vibra'` da data selecionada antes de disparar o workflow de captura Vibra.
+- Workflow `.github/workflows/vibra-capture.yml` recebe inputs `posto` e `data` via `workflow_dispatch`.
+- Log de preços capturados por posto e base em `scripts/vibra-capture.ts`.
+- Deploy de produção na Vercel: `dpl_GCUNqXwoD2nKQwoCsMacpAn3EnJm`, https://nh-transportadora.vercel.app.
+### Corrigido
+- `scripts/vibra-capture.ts`: `--posto=ALL` (ou vazio) captura todos os postos FILIAIS ativos; nao filtra mais por abreviacao "ALL". `--posto=ABREV` filtra por abreviacao.
+- Fluxo ponta-a-ponta verificado: workflow run `40748438489` (conclusion=success) capturou os 3 postos (PNH2-ZN, PNH1-ZS, VITORIA); `cotacoes` tem precos `fonte='vibra'` (2026-10-27 presente; 2026-10-28 = 0, sem emails de preco hoje).
+### Implantação
+- Commits `b127af1` e `7362be6` no GitHub master.
+
 ## [0.1.1] - 2026-10-28
 ### Adicionado
 - Filtros de tabela em /cotacoes (posto, combustível, fornecedor, fonte) via DataTable
