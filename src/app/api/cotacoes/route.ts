@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient()
   const body = await request.json()
-  const { posto_id, combustivel_id, fornecedor_id, preco, fonte, anexo_url, data_registro } = body
+  const { posto_id, combustivel_id, fornecedor_id, preco, fonte, anexo_url, base, data_registro } = body
 
   const dataRegistro = data_registro ? new Date(data_registro).toISOString() : new Date().toISOString()
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     })
     const { data, error } = await supabase
       .from("cotacoes")
-      .update({ preco, fonte: fonte || existing.fonte, anexo_url: anexo_url || existing.anexo_url, data_registro: dataRegistro })
+      .update({ preco, fonte: fonte || existing.fonte, anexo_url: anexo_url || existing.anexo_url, base: base ?? existing.base, data_registro: dataRegistro })
       .eq("id", existing.id)
       .select()
       .single()
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("cotacoes")
-    .insert({ posto_id, combustivel_id, fornecedor_id, preco, fonte: fonte || "manual", anexo_url, data_registro: dataRegistro })
+    .insert({ posto_id, combustivel_id, fornecedor_id, preco, fonte: fonte || "manual", anexo_url, base: base ?? null, data_registro: dataRegistro })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
