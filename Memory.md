@@ -57,7 +57,7 @@ Vibra, Setta, Larco, Petrovia
 - Idioma da UI: português (BR)
 - Idioma de resposta do assistente: sempre português (BR)
 - Commits: Conventional Commits (feat:, fix:, docs:, etc.)
-- Branch principal: main
+- Branch principal: master
 
 ## Status Atual (2026-10-23)
 

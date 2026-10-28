@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server"
+import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
+
+const pedidoItemSchema = z.object({
+  combustivel_id: z.string().min(1, "combustível obrigatório"),
+  quantidade_litros: z.number().positive("quantidade deve ser maior que zero"),
+})
+
+const pedidoSchema = z.object({
+  posto_id: z.string().min(1, "posto obrigatório"),
+  observacoes: z.string().optional(),
+  itens: z.array(pedidoItemSchema).optional(),
+  data: z.string().optional().refine(
+    (value) => value === undefined || !isNaN(Date.parse(value)),
+    "data inválida",
+  ),
+})
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -22,7 +38,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient()
   const body = await request.json()
-  const { posto_id, observacoes, itens, data } = body
+  const parsed = pedidoSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Dados inválidos", issues: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    )
+  }
+  const { posto_id, observacoes, itens, data } = parsed.data
 
   const { data: pedido, error: pedidoError } = await supabase
     .from("pedidos")

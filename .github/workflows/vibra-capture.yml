@@ -1,39 +1,38 @@
-name: Vibra Price Capture
+name: vibra-capture
 
 on:
-  schedule:
-    - cron: "30 10,15 * * *"  # 07:30 e 12:00 BRT (UTC-3)
   workflow_dispatch:
     inputs:
       posto:
-        description: "Posto abreviacao ou ALL"
+        description: "Abreviacao do posto (ex: VIT, ZN). Deixe vazio para capturar todos."
         required: false
-        default: "ALL"
-jobs:
-  capture:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
+        default: ""
 
-      - uses: actions/setup-node@v4
+jobs:
+  capturar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          node-version: 22
+          ref: master
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Install Playwright browsers
+      - name: Install Playwright Chromium (with system deps)
         run: npx playwright install --with-deps chromium
 
-      - name: Run capture
+      - name: Run vibra capture
+        run: npx tsx scripts/vibra-capture.ts ${{ inputs.posto && format('--posto={0}', inputs.posto) }}
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-        run: |
-          if [ "${{ github.event.inputs.posto }}" != "" ] && [ "${{ github.event.inputs.posto }}" != "ALL" ]; then
-            npx tsx scripts/vibra-capture.ts --posto=${{ github.event.inputs.posto }}
-          else
-            npx tsx scripts/vibra-capture.ts
-          fi
+          EMAIL_USER: ${{ secrets.VIBRA_EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.VIBRA_EMAIL_PASS }}

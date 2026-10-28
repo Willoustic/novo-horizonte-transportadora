@@ -40,9 +40,8 @@ src/
     shared/             # componentes reutilizáveis (DataTable)
     ui/                 # shadcn/ui
   lib/                  # supabase, crypto
-  services/             # lógica de negócio
   types/                # tipos TypeScript
-supabase/migrations/    # migrations SQL numeradas
+supabase/migrations/    # migrations SQL numeradas (001_ a 007_)
 scripts/                # automações (vibra-capture)
 docs/                   # documentação técnica
 ```
@@ -89,13 +88,16 @@ Acesse `http://localhost:3000`.
 
 ## Banco de Dados
 
-Aplique as migrations em ordem:
+Aplique as migrations em ordem (nunca pular numeracao em banco ja existente):
 
 ```bash
-supabase/migrations/001_*.sql
+supabase/migrations/001_initial_schema.sql
 supabase/migrations/002_rls_policies.sql
 supabase/migrations/003_seed_data.sql
-...
+supabase/migrations/004_add_base_to_cotacoes.sql
+supabase/migrations/005_add_pedido_status_values.sql
+supabase/migrations/006_add_data_columns.sql
+supabase/migrations/007_remove_vibra.sql
 ```
 
 ## Deploy (Vercel)

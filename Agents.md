@@ -53,7 +53,7 @@ de combustível. 3 postos filiais + postos clientes.
 1. Spec → Planning → Implementation → Review → Deploy
 2. Commits: Conventional Commits
 3. Branch: feature/{nome}, fix/{nome}
-4. PR obrigatório antes de merge na main
+4. PR obrigatório antes de merge na master
 
 ## Referência Rápida de Docs
 | Preciso de... | Arquivo |

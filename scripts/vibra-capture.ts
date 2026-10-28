@@ -29,8 +29,8 @@ const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 const EMAIL_HOST = "imap.gmail.com";
-const EMAIL_USER = "Financeiro@postonovohorizonte.com";
-const EMAIL_PASS = "nfuc htxt limm jvdw";
+const EMAIL_USER = process.env.VIBRA_EMAIL_USER!;
+const EMAIL_PASS = process.env.VIBRA_EMAIL_PASS!;
 
 interface VibraPreco {
   produto: string;

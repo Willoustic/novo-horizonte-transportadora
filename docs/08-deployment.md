@@ -1,19 +1,97 @@
 # 08 - Deploy (Vercel + Supabase)
 
-## Frontend + Backend
-- Vercel (Free): deploy automatico via GitHub
-- Configurar env vars no painel da Vercel
+## Visao geral
+- Frontend + API: Vercel (Free), deploy automatico via push na branch `master` (GitHub).
+- Banco/Auth/Storage: Supabase (Free), PostgreSQL + Auth + Storage.
+- Producao: https://nh-transportadora.vercel.app
+- Repositorio: https://github.com/Willoustic/novo-horizonte-transportadora.git
 
-## Banco de Dados + Auth + Storage
-- Supabase (Free): PostgreSQL + Auth + Storage
-- Migrations em supabase/migrations/
-- RLS policies em arquivo separado
+## Variaveis de ambiente
 
-## CI/CD
-- Push na main -> deploy automatico na Vercel
-- Migrations Supabase aplicadas manualmente
+Nunca commitar valores reais. `.env*` esta no `.gitignore`. Copie `.env.example` para `.env.local` em desenvolvimento.
 
-## Limitacoes do Free Tier
-- Vercel: serverless timeout 10s
-- Supabase: pausa apos 7 dias de inatividade
-- Sem SLA
+### Para o `.env.local` (dev local — nunca commitar)
+
+| Variavel | Origem | Obs |
+|---|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | Supabase Dashboard > Settings > API | URL do projeto |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase Dashboard > Settings > API | Anon key (public) |
+| SUPABASE_SERVICE_ROLE_KEY | Supabase Dashboard > Settings > API | **Segredo.** Server-side only (scripts) |
+| ENCRYPTION_KEY | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | AES-256-GCM, 64 hex chars |
+| NEXT_PUBLIC_APP_URL | http://localhost:3000 (dev) | Base URL da app |
+| GITHUB_TOKEN | GitHub > Settings > Developer settings > Personal access tokens | PAT com acesso a Actions (repo) |
+| GITHUB_REPO_OWNER | Willoustic | Dono do repo |
+| GITHUB_REPO_NAME | novo-horizonte-transportadora | Nome do repo |
+
+### Para o Vercel (Painel > Project > Settings > Environment Variables)
+
+Producao e Preview:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `ENCRYPTION_KEY`
+- `NEXT_PUBLIC_APP_URL` = `https://nh-transportadora.vercel.app`
+- `GITHUB_TOKEN`, `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME` (necessarios para a rota `/api/vibra/capturar` disparar o workflow)
+
+Nao adicionar `SUPABASE_SERVICE_ROLE_KEY` ao Vercel a menos que uma rota server-side precise dela; e nao expor credenciais em responses ou logs.
+
+### Para secrets do GitHub (repositorio > Settings > Secrets and variables > Actions)
+
+Usados pelo workflow `.github/workflows/vibra-capture.yml`:
+- `ENCRYPTION_KEY`
+- `SUPABASE_URL` (mapeado para `NEXT_PUBLIC_SUPABASE_URL` no workflow)
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
+- `VIBRA_EMAIL_PASS` (senha de app Gmail — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
+
+## Migrations do Supabase (aplicacao manual)
+
+Migrations estao em `supabase/migrations/` (numeradas: 001_ a 007_, sem gaps). Aplicar em ordem; em banco existente, nao pular numeracao.
+
+Opcao A — Supabase CLI:
+```
+npx supabase login
+npx supabase link --project-ref <projeto-ref>
+npx supabase db push
+```
+
+Opcao B — SQL Editor (Supabase Dashboard):
+1. Abrir Supabase Dashboard > SQL Editor.
+2. Executar os arquivos em ordem: `001_initial_schema.sql`, `002_rls_policies.sql`, `003_seed_data.sql`, `004_add_base_to_cotacoes.sql`, `005_add_pedido_status_values.sql`, `006_add_data_columns.sql`, `007_remove_vibra.sql`.
+3. Verificar RLS ativo em todas as tabelas (perfil admin/padrao/restrito).
+
+Sempre aplicar RLS. Nao pular migrations.
+
+## vibra-capture (GitHub Actions)
+
+O arquivo `.github/workflows/vibra-capture.yml` **ja existe** (criado neste alinhamento). Disparo:
+1. GitHub > Actions > vibra-capture > Run workflow.
+2. Informar `posto` (abreviacao, ex: VIT, ZN) ou deixar vazio para todos.
+3. A rota `POST /api/vibra/capturar` tambem dispara o workflow via `GITHUB_TOKEN` + `repository_dispatch`/workflow_dispatch.
+
+Segredos necessarios no repo GitHub (lista acima). `VIBRA_EMAIL_USER`/`VIBRA_EMAIL_PASS` lidos via `process.env` em `scripts/vibra-capture.ts`; configurar como secrets do GitHub Actions. Nao commitar credenciais.
+
+## Procedimentos locais (dev)
+
+1. `cp .env.example .env.local` e preencher valores reais (nenhum commita).
+2. `npm install`
+3. `npm run dev` — http://localhost:3000
+4. `npm run lint`
+5. `npm run build` (verificar antes de push)
+6. Captura manual de precos Vibra: `npm run vibra:capture` (usa `.env.local`; opcional `--posto=ABREV`).
+
+## Producao
+
+- URL: https://nh-transportadora.vercel.app
+- Deploy automatico a cada push em `master` via integracao Vercel-GitHub.
+- Migrations aplicadas manualmente antes/depois do deploy, conforme necessario.
+- Nao ha SLA no free tier (Vercel serverless timeout 10s; Supabase pausa apos 7 dias sem atividade).
+
+## Checklist de deploy
+
+- [ ] `.env.example` atualizado com todas as variaveis necessarias
+- [ ] Variaveis do Vercel configuradas (producao + preview)
+- [ ] Secrets do GitHub Actions configurados
+- [ ] Workflow `.github/workflows/vibra-capture.yml` presente e testado via `workflow_dispatch`
+- [ ] Migrations aplicadas no Supabase de producao
+- [ ] RLS ativo em todas as tabelas
+- [ ] Nenhum segredo real em `.env.example` nem commitado

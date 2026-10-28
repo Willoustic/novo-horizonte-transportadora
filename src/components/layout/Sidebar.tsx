@@ -5,6 +5,13 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+
+type Perfil = "admin" | "padrao" | "restrito"
+
+interface SidebarProps {
+  perfil: Perfil
+}
+
 import { useTheme } from "next-themes"
 import {
   LayoutDashboard,
@@ -34,12 +41,26 @@ const NAV = [
   { href: "/parametros", label: "Parametros", icon: Settings },
 ]
 
-export function Sidebar() {
+export function Sidebar({ perfil }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const { theme, setTheme } = useTheme()
+
+  const isAdmin = perfil === "admin"
+
+  const visibleNav = NAV.filter((item) => {
+    // restrito nao tem acesso a nada no sidebar (redirecionado no layout)
+    if (perfil === "restrito") {
+      return false
+    }
+    // /parametros (e /usuarios, quando existir) so para admin
+    if (item.href === "/parametros" && !isAdmin) {
+      return false
+    }
+    return true
+  })
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -90,7 +111,7 @@ export function Sidebar() {
           </button>
         </div>
         <nav className="p-3 space-y-0.5 flex-1">
-          {NAV.map((item) => {
+          {visibleNav.map((item) => {
             const active = pathname === item.href
             return (
               <Link
