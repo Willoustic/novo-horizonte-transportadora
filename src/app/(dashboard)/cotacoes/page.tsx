@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -31,7 +31,7 @@ export default function CotacoesPage() {
   const [captureStatus, setCaptureStatus] = useState<"idle" | "success" | "error">("idle")
   const [form, setForm] = useState({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() })
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     const dateStr = formatDateToDB(selectedDate)
     const [cotRes, postosRes, combRes, fornRes] = await Promise.all([
@@ -58,9 +58,9 @@ export default function CotacoesPage() {
     setCombustiveis(Array.isArray(combJson) ? combJson : [])
     setFornecedores(Array.isArray(fornJson) ? fornJson : [])
     setLoading(false)
-  }
+  }, [selectedDate])
 
-  useEffect(() => { fetchData() }, [selectedDate])
+  useEffect(() => { fetchData() }, [fetchData])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -129,7 +129,10 @@ export default function CotacoesPage() {
           <button onClick={() => { setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
             + Nova Cotação
           </button>
-          <button onClick={() => setVibraModalOpen(true)} disabled={capturing} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50">
+          <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+            {loading ? "Atualizando..." : "Atualizar Preços"}
+          </button>
+          <button onClick={() => setVibraModalOpen(true)} disabled={capturing || loading} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50">
             {capturing ? "Capturando..." : "Capturar Vibra"}
           </button>
         </div>
