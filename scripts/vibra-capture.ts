@@ -115,40 +115,83 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
   const page = await context.newPage();
   const precos: VibraPreco[] = [];
 
+  // Log explícito de cada etapa para debug no console
+  async function logEtapa(etapa: string, mensagem: string): Promise<void> {
+    const agora = new Date().toISOString();
+    console.log(`[${postoAbrev}][${etapa}] ${agora} - ${mensagem}`);
+  }
+
+  async function screenshotEtapa(etapa: string): Promise<void> {
+    try {
+      const nomeArquivo = `tmp/vibra-${postoAbrev}-${etapa}-${Date.now()}.png`;
+      await page.screenshot({ path: nomeArquivo, fullPage: true });
+      console.log(`[${postoAbrev}][${etapa}] screenshot salvo: ${nomeArquivo}`);
+    } catch (e) {
+      console.log(`[${postoAbrev}][${etapa}] falha ao salvar screenshot: ${(e as Error).message}`);
+    }
+  }
+
   try {
+    // Etapa 1 — navegação para o portal
+    await logEtapa("1-navegacao", "Acessando portal Vibra central-de-pedidos");
     await page.goto("https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true", { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForTimeout(3000);
+    await logEtapa("1-navegacao", `URL atual: ${page.url()}`);
+    await screenshotEtapa("1-navegacao");
 
+    // Etapa 2 — login SSO
     if (await page.$('input[name="username"]')) {
-      console.log("Login SSO...");
+      await logEtapa("2-login-sso", "Campo de usuário detectado. Preenchendo credenciais...");
       await page.fill('input[name="username"]', login);
       await page.fill('input[name="password"]', senha);
+      await logEtapa("2-login-sso", "Credenciais preenchidas. Clicando no botão loginBt...");
       await page.click('input[name="loginBt"]');
       await page.waitForTimeout(3000);
-      console.log("Aguardando 10s para 2FA...");
-      await page.waitForTimeout(10000);
+      await logEtapa("2-login-sso", "Aguardando 20s para o campo 2FA aparecer (não aparece imediatamente)...");
+      await page.waitForTimeout(20000);
+      await logEtapa("2-login-sso", `URL após espera 2FA: ${page.url()}`);
+      await screenshotEtapa("2-login-sso-apos-espera");
+
       const since = new Date(Date.now() - 300000);
+      await logEtapa("2-login-sso", "Buscando código 2FA por e-mail (IMAP Gmail)...");
       const code = await waitFor2FACode(since);
       if (code) {
+        await logEtapa("2-login-sso", `Código 2FA recebido: ${code}. Preenchendo campo OTP...`);
         const codeInput = await page.$('input[name="otp"], input#otp');
         if (codeInput) {
           await codeInput.fill("");
           await codeInput.type(code, { delay: 100 });
           await page.waitForTimeout(1000);
+          await logEtapa("2-login-sso", "Clicando em mfaValidate para validar 2FA...");
           await page.click('input[name="mfaValidate"]');
           await page.waitForTimeout(10000);
+          await logEtapa("2-login-sso", `URL após validação 2FA: ${page.url()}`);
+          await screenshotEtapa("2-login-sso-apos-2fa");
+        } else {
+          await logEtapa("2-login-sso", "AVISO: campo OTP não encontrado no DOM após 20s de espera.");
         }
+      } else {
+        await logEtapa("2-login-sso", "ERRO: código 2FA não recebido por e-mail no intervalo de 5 minutos.");
       }
+    } else {
+      await logEtapa("2-login-sso", "Campo de usuário não detectado — possivelmente já autenticado.");
     }
 
-    // Fechar modal
-    const closeBtn = await page.$('i.md-icons:has-text("close")');
-    if (closeBtn) {
-      await closeBtn.click({ force: true });
+    // Etapa 3 — fechar modal inicial (se houver)
+    await logEtapa("3-fechar-modal-inicial", "Verificando modal inicial para fechar...");
+    const closeBtnInicial = await page.$('i.md-icons:has-text("close")');
+    if (closeBtnInicial) {
+      await closeBtnInicial.click({ force: true });
       await page.waitForTimeout(2000);
+      await logEtapa("3-fechar-modal-inicial", "Modal inicial fechado.");
+    } else {
+      await logEtapa("3-fechar-modal-inicial", "Nenhum modal inicial detectado.");
     }
+    await screenshotEtapa("3-fechar-modal-inicial");
 
     async function captureBase(base: string) {
+      await logEtapa(`4-captura-${base}`, `Iniciando captura de preços para a base ${base}...`);
+      await screenshotEtapa(`4-captura-${base}-antes`);
       const bodyText = await page.evaluate(() => document.body.innerText);
       const prices = extractPrices(bodyText);
       for (const p of prices) {
@@ -157,13 +200,16 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
           precos.push({ produto: p.produto, preco, base, posto: postoNome });
         }
       }
+      await logEtapa(`4-captura-${base}`, `${prices.length} preço(ões) extraído(s) para a base ${base}.`);
+      for (const p of prices) {
+        const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
+        if (preco > 0) {
+          await logEtapa(`4-captura-${base}`, `  -> ${p.produto} | Base: ${base} | R$ ${preco.toFixed(4)}`);
+        }
+      }
+      await screenshotEtapa(`4-captura-${base}-depois`);
       console.log(`  ${base}: ${prices.length} preços`);
     }
-
-    // BAGAM (padrão) — aguardar base field aparecer no DOM
-    await page.waitForTimeout(3000);
-    await waitForEl('div.mat-form-field-flex', 5000).then(() => page.waitForTimeout(1000));
-    await captureBase("BAGAM");
 
     async function waitForEl(selector: string, timeoutMs = 5000) {
       try {
@@ -174,8 +220,31 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
       }
     }
 
+    async function closeModal() {
+      const closeBtn = await page.$('i.md-icons:has-text("close")');
+      if (closeBtn) {
+        await closeBtn.click({ force: true });
+        await page.waitForTimeout(2000);
+        console.log("  modal fechado");
+      }
+    }
+
+    // BAGAM (padrão) — aguardar base field aparecer no DOM
+    await page.waitForTimeout(3000);
+    await waitForEl('div.mat-form-field-flex', 5000).then(() => page.waitForTimeout(1000));
+    await captureBase("BAGAM");
+    await closeModal();
+
     async function switchBaseAndCapture(baseName: string) {
+      await logEtapa(`5-troca-base-${baseName}`, `Iniciando troca de base para ${baseName}...`);
+
+      // Garantir que não reste modal aberto da base anterior
+      await logEtapa(`5-troca-base-${baseName}`, "Fechando modal remanescente da base anterior (se houver)...");
+      await closeModal();
+      await screenshotEtapa(`5-troca-base-${baseName}-apos-fechar-modal`);
+
       // Clicar no form field para abrir selector
+      await logEtapa(`5-troca-base-${baseName}`, "Aguardando e clicando no form field de seleção de base...");
       const formField = await waitForEl('div.mat-form-field-flex', 5000);
       if (!formField) {
         const diag = await page.evaluate(() => ({
@@ -184,43 +253,72 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
           textLen: document.body.innerText.length,
           text: document.body.innerText.replace(/\s+/g, " ").slice(0, 500),
         }));
-        console.log(`form-field não encontrado para ${baseName} | url=${diag.url} title=${diag.title} textLen=${diag.textLen}`);
-        console.log(`texto pagina: ${diag.text}`);
+        await logEtapa(`5-troca-base-${baseName}`, `ERRO: form-field não encontrado para ${baseName}`);
+        await logEtapa(`5-troca-base-${baseName}`, `Diagnóstico | url=${diag.url} title=${diag.title} textLen=${diag.textLen}`);
+        await logEtapa(`5-troca-base-${baseName}`, `Texto da página: ${diag.text}`);
+        await screenshotEtapa(`5-troca-base-${baseName}-erro-form-field`);
         return;
       }
       await formField.click({ force: true });
       await page.waitForTimeout(2000);
+      await logEtapa(`5-troca-base-${baseName}`, "Form field clicado.");
 
       // Clicar no +
       const addBtn = await page.$('i.md-icons.adicionar-bases-icon');
       if (addBtn) {
         await addBtn.click({ force: true });
         await page.waitForTimeout(2000);
+        await logEtapa(`5-troca-base-${baseName}`, "Botão '+' (adicionar bases) clicado.");
+      } else {
+        await logEtapa(`5-troca-base-${baseName}`, "AVISO: botão '+' não encontrado.");
       }
 
       // Digitar base
       const input = await page.$('input.mat-autocomplete-trigger');
-      if (!input) { console.log("input não encontrado"); return; }
+      if (!input) {
+        await logEtapa(`5-troca-base-${baseName}`, "ERRO: input.mat-autocomplete-trigger não encontrado.");
+        await screenshotEtapa(`5-troca-base-${baseName}-erro-input`);
+        return;
+      }
       await input.fill("");
       await input.type(baseName, { delay: 100 });
       await page.waitForTimeout(2000);
+      await logEtapa(`5-troca-base-${baseName}`, `Base "${baseName}" digitada no autocomplete.`);
 
       // Selecionar opção
       const option = await page.$(`mat-option:has-text("${baseName}")`);
       if (option) {
         await option.click({ force: true });
         await page.waitForTimeout(2000);
+        await logEtapa(`5-troca-base-${baseName}`, `Opção "${baseName}" selecionada no dropdown.`);
+      } else {
+        await logEtapa(`5-troca-base-${baseName}`, `AVISO: mat-option "${baseName}" não encontrada no dropdown.`);
       }
 
       // Simular preços
+      await logEtapa(`5-troca-base-${baseName}`, "Aguardando simulador de preços aparecer e clicando em 'Simular preços'...");
       const simularBtn = await page.$('button:has-text("Simular preços")');
       if (simularBtn) {
         await simularBtn.click({ force: true });
         await page.waitForTimeout(5000);
+        await logEtapa(`5-troca-base-${baseName}`, "Botão 'Simular preços' clicado. Aguardando 5s para o simulador renderizar...");
+        await screenshotEtapa(`5-troca-base-${baseName}-apos-simular`);
+      } else {
+        await logEtapa(`5-troca-base-${baseName}`, "AVISO: botão 'Simular preços' não encontrado.");
       }
 
       await captureBase(baseName);
+      await closeModal();
+      await logEtapa(`5-troca-base-${baseName}`, `Troca de base para ${baseName} concluída e modal fechado.`);
     }
+
+    // BAGAM (padrão) — aguardar base field aparecer no DOM
+    await logEtapa("4-captura-BAGAM", "Aguardando base field aparecer no DOM para BAGAM...");
+    await page.waitForTimeout(3000);
+    await waitForEl('div.mat-form-field-flex', 5000).then(() => page.waitForTimeout(1000));
+    await captureBase("BAGAM");
+    await closeModal();
+    await logEtapa("4-captura-BAGAM", "Captura BAGAM concluída e modal fechado.");
 
     await switchBaseAndCapture("ARCAB");
     await switchBaseAndCapture("AISUAP");
