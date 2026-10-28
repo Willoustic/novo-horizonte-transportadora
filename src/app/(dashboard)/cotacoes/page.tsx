@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { DatePicker } from "@/components/ui/date-picker"
-import { formatDateToDB } from "@/lib/date-utils"
+import { formatDateToDB, formatDateTimeBR } from "@/lib/date-utils"
 import { Trash2 } from "lucide-react"
 import { type ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/components/shared/DataTable"
@@ -139,7 +139,7 @@ export default function CotacoesPage() {
             { id: "base", accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base || "-", enableColumnFilter: true },
             { id: "preco", accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
             { id: "fonte", accessorFn: (row: any) => FONTES[row.fonte] || row.fonte, header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
-            { id: "data", accessorFn: (row: any) => new Date(row.data_registro).toLocaleDateString("pt-BR"), header: "Data", cell: ({ row }: any) => new Date(row.original.data_registro).toLocaleDateString("pt-BR") },
+            { id: "data", accessorFn: (row: any) => formatDateTimeBR(row.data_registro), header: "Data", cell: ({ row }: any) => formatDateTimeBR(row.original.data_registro), enableColumnFilter: true },
             { id: "acoes", header: "Ações", cell: ({ row }: any) => (
               <button onClick={() => handleDelete(row.original.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Excluir cotação">
                 <Trash2 className="h-4 w-4" />

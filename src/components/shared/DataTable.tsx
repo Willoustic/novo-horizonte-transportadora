@@ -22,19 +22,32 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [sorting, setSorting] = useState<any[]>([])
 
+  const cellValue = (row: any, col: any): any => {
+    if (col.accessorKey) return row[col.accessorKey]
+    if (col.accessorFn) return col.accessorFn(row)
+    return row[col.id]
+  }
+
+  const columnsWithFilter = useMemo(() => columns.map((col: any) => {
+    if (!col.filterValue && col.accessorFn) {
+      return { ...col, filterValue: (row: any) => col.accessorFn!(row) }
+    }
+    return col
+  }), [columns])
+
   const distinctValues = useMemo(() => {
     const map: Record<string, string[]> = {}
-    columns.forEach((c: any) => {
+    columnsWithFilter.forEach((c: any) => {
       const id = c.accessorKey || c.id
       if (!id) return
       const vals = Array.from(new Set(data.map((row: any) => {
-        const v = row[id]
+        const v = cellValue(row, c)
         return v == null ? "" : String(v)
       }))).filter((v) => v !== "").sort()
       map[id] = vals
     })
     return map
-  }, [data, columns])
+  }, [data, columnsWithFilter])
 
   const tableState = useMemo(() => ({
     columnFilters: Object.entries(columnFilters)
@@ -45,7 +58,7 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
 
   const table = useReactTable({
     data,
-    columns,
+    columns: columnsWithFilter,
     state: tableState,
     onColumnFiltersChange: (updater) => {
       const prev = Object.entries(columnFilters)
@@ -72,7 +85,7 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
             <TableRow key={hg.id}>
               {hg.headers.map((h) => {
                 const colId = h.column.id
-                const canFilter = !!(h.column.columnDef as any).accessorKey
+                const canFilter = !!(h.column.columnDef as any).enableColumnFilter
                 return (
                   <TableHead key={h.id} className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
                     <div className="flex flex-col gap-1">
