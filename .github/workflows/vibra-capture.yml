@@ -8,6 +8,11 @@ on:
         required: false
         default: ""
 
+      data:
+        description: "Data das cotacoes no formato YYYY-MM-DD para deletar precos vibra existentes antes da captura."
+        required: false
+        default: ""
+
 jobs:
   capturar:
     runs-on: ubuntu-latest

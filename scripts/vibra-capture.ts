@@ -254,7 +254,10 @@ async function main() {
   for (const posto of filteredPostos) {
     console.log(`Capturando preços para ${posto.nome}...`);
     const precos = await captureForPosto(posto.id, posto.nome, posto.abreviacao);
-    console.log(`Capturados ${precos.length} preços`);
+    console.log(`Capturados ${precos.length} preços para ${posto.abreviacao}`);
+    for (const p of precos) {
+      console.log(`${posto.abreviacao} | ${p.base} | ${p.produto} | R$ ${p.preco.toFixed(4)}`);
+    }
 
     for (const p of precos) {
       const combustivelId = combustivelMap.get(p.produto.toLowerCase());

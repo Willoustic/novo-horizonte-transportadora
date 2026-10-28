@@ -87,7 +87,7 @@ export default function CotacoesPage() {
       const res = await fetch("/api/vibra/capturar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posto: selectedPosto }),
+        body: JSON.stringify({ posto: selectedPosto, data: formatDateToDB(selectedDate) }),
       })
       const json = await res.json()
       if (res.ok) {
