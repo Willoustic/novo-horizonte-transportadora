@@ -36,15 +36,17 @@ export function DataTable<TData>({ columns, data, loading, emptyMessage }: DataT
     return map
   }, [data, columns])
 
+  const tableState = useMemo(() => ({
+    columnFilters: Object.entries(columnFilters)
+      .filter(([, v]) => v)
+      .map(([id, value]) => ({ id, value })),
+    sorting,
+  }), [columnFilters, sorting])
+
   const table = useReactTable({
     data,
     columns,
-    state: {
-      columnFilters: Object.entries(columnFilters)
-        .filter(([, v]) => v)
-        .map(([id, value]) => ({ id, value })),
-      sorting,
-    },
+    state: tableState,
     onColumnFiltersChange: (updater) => {
       const prev = Object.entries(columnFilters)
         .filter(([, v]) => v)

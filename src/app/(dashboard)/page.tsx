@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client"
 import { Package, Truck, ClipboardList, DollarSign, Users, Settings, LayoutDashboard, Fuel } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { DatePicker } from "@/components/ui/date-picker"
+import { formatDateToDB } from "@/lib/date-utils"
 
 interface LitragemRow { posto: string; combustivel: string; bases: string; total: number }
 interface CarregRow { motorista: string; cavalo: string; tanque: string; total: number }
@@ -17,6 +19,8 @@ export default function DashboardPage() {
   const [carreg, setCarreg] = useState<CarregRow[]>([])
   const [estoque, setEstoque] = useState<EstoqueRow[]>([])
   const [precos, setPrecos] = useState<PrecoRow[]>([])
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const dateStr = formatDateToDB(selectedDate)
   const supabase = createClient()
 
   useEffect(() => {
@@ -27,6 +31,7 @@ export default function DashboardPage() {
         const { data: pedidos } = await supabase
           .from("pedidos")
           .select("id, posto_id, postos(nome, abreviacao), itens_pedido(volume_solicitado, combustivel_id, combustiveis(nome, abreviacao))")
+          .eq("data", dateStr)
         const litMap: Record<string, number> = {}
         const pedidoCombMap: Record<string, Set<string>> = {}
         ;(pedidos || []).forEach((p: any) => {
@@ -69,6 +74,7 @@ export default function DashboardPage() {
         const { data: carregamentos } = await supabase
           .from("carregamentos")
           .select("volume, motoristas(nome), cavalos(placa), tanques_carreta(identificacao)")
+          .eq("data", dateStr)
         const carMap: Record<string, { motorista: string; cavalo: string; tanque: string; total: number }> = {}
         ;(carregamentos || []).forEach((c: any) => {
           const m = c.motoristas?.nome || "?"
@@ -82,6 +88,7 @@ export default function DashboardPage() {
         const { data: snaps } = await supabase
           .from("estoque_snapshots")
           .select("volume, tanques_posto(combustivel_id, postos(nome, abreviacao, tipo), combustiveis(abreviacao, nome))")
+          .eq("data", dateStr)
         const estMap: Record<string, number> = {}
         ;(snaps || []).forEach((s: any) => {
           const tp = s.tanques_posto
@@ -96,10 +103,14 @@ export default function DashboardPage() {
           return { posto, combustivel, volume: v }
         }))
 
-        // 4. Melhor preco por posto x produto (min)
+        // 4. Melhor preco por posto x produto (min) — filtro por data_registro no dia selecionado
+        const dataStart = `${dateStr}T00:00:00Z`
+        const dataEnd = `${dateStr}T23:59:59Z`
         const { data: cotacoes } = await supabase
           .from("cotacoes")
           .select("preco, base, postos(abreviacao, nome), combustiveis(abreviacao, nome)")
+          .gte("data_registro", dataStart)
+          .lte("data_registro", dataEnd)
         const precoMap: Record<string, { preco: number; base: string }> = {}
         ;(cotacoes || []).forEach((c: any) => {
           const posto = c.postos?.abreviacao || c.postos?.nome || "?"
@@ -121,7 +132,7 @@ export default function DashboardPage() {
       }
     }
     load()
-  }, [supabase])
+  }, [supabase, dateStr])
 
   const shortcuts = [
     { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
@@ -134,9 +145,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Visao operacional</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Visao operacional</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <DatePicker date={selectedDate} onChange={setSelectedDate} label="Data" />
+        </div>
       </div>
 
       {loading ? (

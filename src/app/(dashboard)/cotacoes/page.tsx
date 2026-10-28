@@ -133,13 +133,13 @@ export default function CotacoesPage() {
       ) : (
         <DataTable
           columns={[
-            { accessorKey: "posto", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-" },
-            { accessorKey: "combustivel", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-" },
-            { accessorKey: "fornecedor", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-" },
-            { accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base || "-", enableColumnFilter: true },
-            { accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
-            { accessorKey: "fonte", header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
-            { accessorKey: "data", header: "Data", cell: ({ row }: any) => new Date(row.original.data_registro).toLocaleDateString("pt-BR") },
+            { id: "posto", accessorFn: (row: any) => row.posto?.abreviacao || "-", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-", enableColumnFilter: true },
+            { id: "combustivel", accessorFn: (row: any) => row.combustivel?.abreviacao || "-", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-", enableColumnFilter: true },
+            { id: "fornecedor", accessorFn: (row: any) => row.fornecedor?.nome || "-", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-", enableColumnFilter: true },
+            { id: "base", accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base || "-", enableColumnFilter: true },
+            { id: "preco", accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
+            { id: "fonte", accessorFn: (row: any) => FONTES[row.fonte] || row.fonte, header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
+            { id: "data", accessorFn: (row: any) => new Date(row.data_registro).toLocaleDateString("pt-BR"), header: "Data", cell: ({ row }: any) => new Date(row.original.data_registro).toLocaleDateString("pt-BR") },
             { id: "acoes", header: "Ações", cell: ({ row }: any) => (
               <button onClick={() => handleDelete(row.original.id)} className="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Excluir cotação">
                 <Trash2 className="h-4 w-4" />

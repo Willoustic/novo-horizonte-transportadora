@@ -273,18 +273,20 @@ async function main() {
 
       const now = new Date().toISOString();
       if (existing) {
-        await supabase.from("historico_precos").insert({
+        const { error: histError } = await supabase.from("historico_precos").insert({
           cotacao_id: existing.id,
           preco_anterior: existing.preco,
           preco_novo: p.preco,
           fonte: "vibra",
         });
-        await supabase
+        if (histError) console.error(`Erro histórico ${p.base}:`, histError.message);
+        const { error: updError } = await supabase
           .from("cotacoes")
           .update({ preco: p.preco, fonte: "vibra", data_registro: now, base: p.base })
           .eq("id", existing.id);
+        if (updError) console.error(`Erro update ${p.base}:`, updError.message);
       } else {
-        await supabase.from("cotacoes").insert({
+        const { error: insError } = await supabase.from("cotacoes").insert({
           posto_id: posto.id,
           combustivel_id: combustivelId,
           fornecedor_id: fornecedorId,
@@ -293,6 +295,7 @@ async function main() {
           data_registro: now,
           base: p.base,
         });
+        if (insError) console.error(`Erro insert ${p.base}:`, insError.message);
       }
     }
   }
