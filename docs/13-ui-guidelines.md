@@ -26,6 +26,12 @@
 - Breadcrumb em paginas internas
 - Responsivo: mobile-first
 
+## Logo
+- Componente: `src/components/layout/Logo.tsx`
+- Imagem oficial: `public/logo.jfif` (cópia exata do arquivo original, sem conversao)
+- Uso: `<Logo />` nas telas de login e sidebar (desktop + mobile top bar)
+- Nunca expor como texto puro "Novo Horizonte" — usar sempre o componente Logo
+
 ## Acessibilidade
 - Contraste minimo WCAG AA
 - Focus visible em todos os elementos interativos

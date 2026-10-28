@@ -1,5 +1,6 @@
 "use client"
 
+import { Logo } from "@/components/layout/Logo"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
@@ -36,9 +37,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-green-600">
-            Novo Horizonte
-          </h1>
+          <Logo width={120} height={40} />
           <p className="text-gray-500 mt-2">Transportadora de Combustiveis</p>
         </div>
 
