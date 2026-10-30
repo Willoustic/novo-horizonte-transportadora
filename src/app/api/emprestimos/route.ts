@@ -11,7 +11,9 @@ export async function GET(request: Request) {
     .select("*, combustivel:combustiveis(nome, abreviacao), posto_origem:postos!posto_origem_id(nome, abreviacao), posto_destino:postos!posto_destino_id(nome, abreviacao)")
 
   if (data) {
-    query = query.eq("data_emprestimo", data)
+    // Emprestimos pendentes aparecem em todas as datas a partir da data do emprestimo
+    // Quitados aparecem apenas na data da devolucao (ou data do emprestimo se sem devolucao)
+    query = query.or(`and(data_emprestimo.eq.${data},status.eq.pendente),and(data_emprestimo.lte.${data},status.eq.devolvido_parcial),and(data_emprestimo.lte.${data},status.eq.devolvido)`)
   }
 
   const { data: emprestimos, error } = await query.order("data_emprestimo", { ascending: false })

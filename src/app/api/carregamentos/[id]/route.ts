@@ -23,9 +23,20 @@ export async function PUT(
   const { id } = await params
   const supabase = await createClient()
   const body = await request.json()
+  const { base_origem, base_id, ...rest } = body
+  const updateData: any = { ...rest }
+  if (base_id) updateData.base_id = base_id
+  else if (base_origem) {
+    const { data: baseRes } = await supabase
+      .from("bases")
+      .select("id")
+      .eq("abreviacao", base_origem)
+      .single()
+    if (baseRes) updateData.base_id = baseRes.id
+  }
   const { data, error } = await supabase
     .from("carregamentos")
-    .update(body)
+    .update(updateData)
     .eq("id", id)
     .select()
     .single()

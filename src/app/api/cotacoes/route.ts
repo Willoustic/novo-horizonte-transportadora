@@ -18,7 +18,9 @@ export async function GET(request: Request) {
     query = query.gte("data_registro", start).lte("data_registro", end)
   }
 
-  const { data: cotacoes, error } = await query.order("data_registro", { ascending: false })
+  const { data: cotacoes, error } = await query
+    .select("*, posto:postos(nome, abreviacao), combustivel:combustiveis(nome, abreviacao), fornecedor:fornecedores(nome), base:bases(nome, abreviacao)")
+    .order("data_registro", { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(cotacoes)
 }
@@ -26,11 +28,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient()
   const body = await request.json()
-  const { posto_id, combustivel_id, fornecedor_id, preco, fonte, anexo_url, base, data_registro } = body
+  const { posto_id, combustivel_id, fornecedor_id, preco, fonte, anexo_url, base_id, data_registro } = body
 
   const dataRegistro = data_registro ? new Date(data_registro).toISOString() : new Date().toISOString()
 
-  // Check existing per (posto_id, combustivel_id, fornecedor_id, base)
+  // Check existing per (posto_id, combustivel_id, fornecedor_id, base_id)
   // so a new capture overwrites the current price for that base instead of duplicating.
   let existingQuery = supabase
     .from("cotacoes")
@@ -39,10 +41,10 @@ export async function POST(request: Request) {
     .eq("combustivel_id", combustivel_id)
     .eq("fornecedor_id", fornecedor_id)
 
-  if (base == null) {
-    existingQuery = existingQuery.is("base", null)
+  if (base_id == null) {
+    existingQuery = existingQuery.is("base_id", null)
   } else {
-    existingQuery = existingQuery.eq("base", base)
+    existingQuery = existingQuery.eq("base_id", base_id)
   }
 
   const { data: existingRows } = await existingQuery
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
     })
     const { data, error } = await supabase
       .from("cotacoes")
-      .update({ preco, fonte: fonte || existing.fonte, anexo_url: anexo_url || existing.anexo_url, base: base ?? existing.base, data_registro: dataRegistro })
+      .update({ preco, fonte: fonte || existing.fonte, anexo_url: anexo_url || existing.anexo_url, base_id: base_id ?? existing.base_id, data_registro: dataRegistro })
       .eq("id", existing.id)
       .select()
       .single()
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("cotacoes")
-    .insert({ posto_id, combustivel_id, fornecedor_id, preco, fonte: fonte || "manual", anexo_url, base: base ?? null, data_registro: dataRegistro })
+    .insert({ posto_id, combustivel_id, fornecedor_id, preco, fonte: fonte || "manual", anexo_url, base_id: base_id ?? null, data_registro: dataRegistro })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

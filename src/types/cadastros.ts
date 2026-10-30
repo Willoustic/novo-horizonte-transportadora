@@ -61,3 +61,11 @@ export interface TanquePosto {
   posto?: Posto
   combustivel?: Combustivel
 }
+
+export interface Base {
+  id: string
+  nome: string
+  abreviacao: string
+  ativo: boolean
+  created_at: string
+}

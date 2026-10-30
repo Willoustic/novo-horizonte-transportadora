@@ -46,15 +46,16 @@ export default function DashboardPage() {
           pedidoCombMap[p.id] = combs
         })
 
-        // bases per posto x combustivel from carregamentos
+        // bases per posto x combustivel from carregamentos (base_id FK -> bases.abreviacao)
         const basesMap: Record<string, Set<string>> = {}
         const postoById: Record<string, string> = {}
         const { data: postosAll } = await supabase.from("postos").select("id, abreviacao, nome")
         ;(postosAll || []).forEach((po: any) => { postoById[po.id] = po.abreviacao || po.nome || "?" })
-        const { data: carregBase } = await supabase.from("carregamentos").select("base_origem, posto_destino_id, pedido_id")
+        const { data: carregBase } = await supabase.from("carregamentos").select("base:bases(abreviacao), posto_destino_id, pedido_id")
         ;(carregBase || []).forEach((c: any) => {
           const posto = postoById[c.posto_destino_id] || "?"
-          const bases = c.base_origem ? String(c.base_origem).split(",").map((s: string) => s.trim()).filter(Boolean) : []
+          const baseAbbr = c.base?.abreviacao
+          const bases = baseAbbr ? [baseAbbr] : []
           const combs = (c.pedido_id && pedidoCombMap[c.pedido_id]) ? Array.from(pedidoCombMap[c.pedido_id]) : []
           const targetCombs = combs.length ? combs : (bases.length ? ["?"] : [])
           targetCombs.forEach((comb: string) => {
@@ -73,7 +74,7 @@ export default function DashboardPage() {
         // 2. Carregamento por motorista
         const { data: carregamentos } = await supabase
           .from("carregamentos")
-          .select("volume, motoristas(nome), cavalos(placa), tanques_carreta(identificacao)")
+          .select("volume, base:bases(abreviacao), motoristas(nome), cavalos(placa), tanques_carreta(identificacao)")
           .eq("data", dateStr)
         const carMap: Record<string, { motorista: string; cavalo: string; tanque: string; total: number }> = {}
         ;(carregamentos || []).forEach((c: any) => {
@@ -108,14 +109,14 @@ export default function DashboardPage() {
         const dataEnd = `${dateStr}T23:59:59Z`
         const { data: cotacoes } = await supabase
           .from("cotacoes")
-          .select("preco, base, postos(abreviacao, nome), combustiveis(abreviacao, nome)")
+          .select("preco, base:bases(abreviacao), postos(abreviacao, nome), combustiveis(abreviacao, nome)")
           .gte("data_registro", dataStart)
           .lte("data_registro", dataEnd)
         const precoMap: Record<string, { preco: number; base: string }> = {}
         ;(cotacoes || []).forEach((c: any) => {
           const posto = c.postos?.abreviacao || c.postos?.nome || "?"
           const comb = c.combustiveis?.abreviacao || c.combustiveis?.nome || "?"
-          const base = c.base || "-"
+          const base = c.base?.abreviacao || "-"
           const key = `${posto}|${comb}`
           const p = Number(c.preco || 0)
           if (!(key in precoMap) || p < precoMap[key].preco) precoMap[key] = { preco: p, base }

@@ -23,6 +23,19 @@ export async function PUT(
   const { id } = await params
   const supabase = await createClient()
   const body = await request.json()
+  const { base, base_id, ...rest } = body
+  const updateData: any = { ...rest }
+  if (base_id !== undefined) updateData.base_id = base_id
+  else if (base !== undefined) {
+    const { data: baseRes } = await supabase
+      .from("bases")
+      .select("id")
+      .eq("abreviacao", base)
+      .single()
+    if (baseRes) updateData.base_id = baseRes.id
+    else updateData.base_id = null
+  }
+
   const { data: existing } = await supabase.from("cotacoes").select("*").eq("id", id).single()
 
   if (existing && body.preco !== undefined && body.preco !== existing.preco) {
@@ -36,7 +49,7 @@ export async function PUT(
 
   const { data, error } = await supabase
     .from("cotacoes")
-    .update(body)
+    .update(updateData)
     .eq("id", id)
     .select()
     .single()
