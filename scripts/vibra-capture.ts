@@ -229,99 +229,88 @@ async function captureForPosto(postoId: string, postoNome: string, postoAbrev: s
       }
     }
 
-    // BAGAM (padrão) — aguardar base field aparecer no DOM
-    await page.waitForTimeout(3000);
-    await waitForEl('div.mat-form-field-flex', 5000).then(() => page.waitForTimeout(1000));
-    await captureBase("BAGAM");
-    await closeModal();
+    const BASES = ["BAGAM", "ARCAB", "AISUAP"];
 
-    async function switchBaseAndCapture(baseName: string) {
-      await logEtapa(`5-troca-base-${baseName}`, `Iniciando troca de base para ${baseName}...`);
-
-      // Garantir que não reste modal aberto da base anterior
-      await logEtapa(`5-troca-base-${baseName}`, "Fechando modal remanescente da base anterior (se houver)...");
-      await closeModal();
-      await screenshotEtapa(`5-troca-base-${baseName}-apos-fechar-modal`);
-
-      // Clicar no form field para abrir selector
-      await logEtapa(`5-troca-base-${baseName}`, "Aguardando e clicando no form field de seleção de base...");
-      const formField = await waitForEl('div.mat-form-field-flex', 5000);
+    async function selecionarBase(base: string) {
+      await logEtapa(`selecionar-base-${base}`, `Abrindo seletor de base para ${base}...`);
+      const formField = await waitForEl('div.mat-form-field-flex', 8000);
       if (!formField) {
-        const diag = await page.evaluate(() => ({
-          url: window.location.href,
-          title: document.title,
-          textLen: document.body.innerText.length,
-          text: document.body.innerText.replace(/\s+/g, " ").slice(0, 500),
-        }));
-        await logEtapa(`5-troca-base-${baseName}`, `ERRO: form-field não encontrado para ${baseName}`);
-        await logEtapa(`5-troca-base-${baseName}`, `Diagnóstico | url=${diag.url} title=${diag.title} textLen=${diag.textLen}`);
-        await logEtapa(`5-troca-base-${baseName}`, `Texto da página: ${diag.text}`);
-        await screenshotEtapa(`5-troca-base-${baseName}-erro-form-field`);
-        return;
+        throw new Error(`form-field de seleção de base não encontrado para ${base}`);
       }
       await formField.click({ force: true });
-      await page.waitForTimeout(2000);
-      await logEtapa(`5-troca-base-${baseName}`, "Form field clicado.");
+      await page.waitForTimeout(1500);
 
-      // Clicar no +
       const addBtn = await page.$('i.md-icons.adicionar-bases-icon');
       if (addBtn) {
         await addBtn.click({ force: true });
-        await page.waitForTimeout(2000);
-        await logEtapa(`5-troca-base-${baseName}`, "Botão '+' (adicionar bases) clicado.");
-      } else {
-        await logEtapa(`5-troca-base-${baseName}`, "AVISO: botão '+' não encontrado.");
+        await page.waitForTimeout(1500);
       }
 
-      // Digitar base
       const input = await page.$('input.mat-autocomplete-trigger');
       if (!input) {
-        await logEtapa(`5-troca-base-${baseName}`, "ERRO: input.mat-autocomplete-trigger não encontrado.");
-        await screenshotEtapa(`5-troca-base-${baseName}-erro-input`);
-        return;
+        throw new Error(`input.mat-autocomplete-trigger não encontrado para ${base}`);
       }
       await input.fill("");
-      await input.type(baseName, { delay: 100 });
-      await page.waitForTimeout(2000);
-      await logEtapa(`5-troca-base-${baseName}`, `Base "${baseName}" digitada no autocomplete.`);
+      await input.type(base, { delay: 100 });
+      await page.waitForTimeout(1500);
 
-      // Selecionar opção
-      const option = await page.$(`mat-option:has-text("${baseName}")`);
-      if (option) {
-        await option.click({ force: true });
-        await page.waitForTimeout(2000);
-        await logEtapa(`5-troca-base-${baseName}`, `Opção "${baseName}" selecionada no dropdown.`);
-      } else {
-        await logEtapa(`5-troca-base-${baseName}`, `AVISO: mat-option "${baseName}" não encontrada no dropdown.`);
+      const option = await page.$(`mat-option:has-text("${base}")`);
+      if (!option) {
+        throw new Error(`mat-option "${base}" não encontrada no dropdown`);
       }
+      await option.click({ force: true });
+      await page.waitForTimeout(1500);
 
-      // Simular preços
-      await logEtapa(`5-troca-base-${baseName}`, "Aguardando simulador de preços aparecer e clicando em 'Simular preços'...");
-      const simularBtn = await page.$('button:has-text("Simular preços")');
-      if (simularBtn) {
-        await simularBtn.click({ force: true });
-        await page.waitForTimeout(5000);
-        await logEtapa(`5-troca-base-${baseName}`, "Botão 'Simular preços' clicado. Aguardando 5s para o simulador renderizar...");
-        await screenshotEtapa(`5-troca-base-${baseName}-apos-simular`);
-      } else {
-        await logEtapa(`5-troca-base-${baseName}`, "AVISO: botão 'Simular preços' não encontrado.");
+      // Verifica se a base foi realmente selecionada antes de simular
+      const selecionado = await page.$('div.mat-form-field-flex');
+      const texto = selecionado ? await selecionado.innerText() : "";
+      if (!texto.includes(base)) {
+        throw new Error(`Base "${base}" não foi selecionada (campo mostra: ${texto})`);
       }
-
-      await captureBase(baseName);
-      await closeModal();
-      await logEtapa(`5-troca-base-${baseName}`, `Troca de base para ${baseName} concluída e modal fechado.`);
+      await logEtapa(`selecionar-base-${base}`, `Base "${base}" selecionada.`);
     }
 
-    // BAGAM (padrão) — aguardar base field aparecer no DOM
-    await logEtapa("4-captura-BAGAM", "Aguardando base field aparecer no DOM para BAGAM...");
-    await page.waitForTimeout(3000);
-    await waitForEl('div.mat-form-field-flex', 5000).then(() => page.waitForTimeout(1000));
-    await captureBase("BAGAM");
-    await closeModal();
-    await logEtapa("4-captura-BAGAM", "Captura BAGAM concluída e modal fechado.");
+    async function simularPreços(base: string) {
+      await logEtapa(`simular-${base}`, `Clicando em 'Simular preços' para ${base}...`);
+      const btn = await page.$('button:has-text("Simular preços")');
+      if (!btn) {
+        throw new Error(`botão "Simular preços" não encontrado para ${base}`);
+      }
+      await btn.click({ force: true });
+      await page.waitForTimeout(3000);
+      // Aguarda o simulador renderizar preços para essa base (poll, não sono fixo longo)
+      const deadline = Date.now() + 30000;
+      let ultimoTexto = "";
+      while (Date.now() < deadline) {
+        const corpo = await page.evaluate(() => document.body.innerText);
+        if (corpo !== ultimoTexto && /R\$\s*[\d.,]+/.test(corpo)) {
+          await logEtapa(`simular-${base}`, "Preços renderizados para a base.");
+          return;
+        }
+        ultimoTexto = corpo;
+        await page.waitForTimeout(1500);
+      }
+      await logEtapa(`simular-${base}`, "AVISO: tempo esgotado aguardando preços (prosseguindo com captura).");
+    }
 
-    await switchBaseAndCapture("ARCAB");
-    await switchBaseAndCapture("AISUAP");
+    // Captura uma base por vez, em estado limpo, sem contaminação entre bases.
+    for (const base of BASES) {
+      await logEtapa(`captura-${base}`, `Iniciando captura isolada da base ${base}...`);
+      // Re-abre o simulador para cada base (estado limpo, sem re-login/2FA)
+      await page.goto("https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true", {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
+      await page.waitForTimeout(3000);
+      await closeModal();
+      await page.waitForTimeout(1000);
+
+      await selecionarBase(base);
+      await simularPreços(base);
+      await captureBase(base);
+      await closeModal();
+      await logEtapa(`captura-${base}`, `Captura isolada da base ${base} concluída.`);
+    }
   } catch (err) {
     console.error("Erro na captura:", err);
   } finally {
@@ -362,6 +351,11 @@ async function main() {
   combustivelMap.set("gasolina comum c aditivada", combustivelMap.get("gasolina aditivada")!);
   combustivelMap.set("etanol hidratado combustivel", combustivelMap.get("etanol")!);
 
+  // Build base abreviacao -> id map for base_id FK lookup
+  const { data: basesData } = await supabase.from("bases").select("id, abreviacao");
+  const baseIdMap: Record<string, string> = {};
+  basesData?.forEach((b) => { baseIdMap[b.abreviacao] = b.id; });
+
   // Allow filtering by a single posto via --posto=ABREV.
   // "ALL" or empty means all active FILIAL postos.
   const postoArg = process.argv.find((a) => a.startsWith("--posto="));
@@ -385,13 +379,18 @@ async function main() {
         console.warn(`Combustível não mapeado: ${p.produto}`);
         continue;
       }
+      const baseId = baseIdMap[p.base];
+      if (!baseId) {
+        console.warn(`Base não encontrada no mapa: ${p.base}`);
+        continue;
+      }
       const { data: existing } = await supabase
         .from("cotacoes")
         .select("id, preco")
         .eq("posto_id", posto.id)
         .eq("combustivel_id", combustivelId)
         .eq("fornecedor_id", fornecedorId)
-        .eq("base", p.base)
+        .eq("base_id", baseId)
         .single();
 
       const now = new Date().toISOString();
@@ -405,7 +404,7 @@ async function main() {
         if (histError) console.error(`Erro histórico ${p.base}:`, histError.message);
         const { error: updError } = await supabase
           .from("cotacoes")
-          .update({ preco: p.preco, fonte: "vibra", data_registro: now, base: p.base })
+          .update({ preco: p.preco, fonte: "vibra", data_registro: now, base_id: baseId })
           .eq("id", existing.id);
         if (updError) console.error(`Erro update ${p.base}:`, updError.message);
       } else {
@@ -416,7 +415,7 @@ async function main() {
           preco: p.preco,
           fonte: "vibra",
           data_registro: now,
-          base: p.base,
+          base_id: baseId,
         });
         if (insError) console.error(`Erro insert ${p.base}:`, insError.message);
       }

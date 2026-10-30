@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server"
 const pedidoItemSchema = z.object({
   combustivel_id: z.string().min(1, "combustível obrigatório"),
   quantidade_litros: z.number().positive("quantidade deve ser maior que zero"),
+  fornecedor_id: z.string().min(1, "fornecedor obrigatório"),
+  base_id: z.string().min(1, "base obrigatória"),
 })
 
 const pedidoSchema = z.object({
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("pedidos")
-    .select("*, posto:postos(nome, abreviacao), itens:itens_pedido(*, combustivel:combustiveis(nome, abreviacao))")
+    .select("*, posto:postos(nome, abreviacao), itens:itens_pedido(*, combustivel:combustiveis(nome, abreviacao), fornecedor:fornecedores(nome), base:bases(nome, abreviacao))")
 
   if (data) {
     query = query.eq("data", data)
@@ -76,6 +78,8 @@ export async function POST(request: Request) {
         combustivel_id: item.combustivel_id,
         tanque_posto_id: tanque.id,
         volume_solicitado: item.quantidade_litros,
+        fornecedor_id: item.fornecedor_id,
+        base_id: item.base_id,
       })
     }
     const { error: itensError } = await supabase.from("itens_pedido").insert(itensData)

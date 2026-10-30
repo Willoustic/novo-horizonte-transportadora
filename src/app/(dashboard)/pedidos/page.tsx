@@ -11,7 +11,8 @@ import { Trash2, Plus, Calendar as CalendarIcon, ClipboardList } from "lucide-re
 interface Posto { id: string; nome: string; abreviacao: string; tipo: string }
 interface Combustivel { id: string; nome: string; abreviacao: string }
 interface Fornecedor { id: string; nome: string }
-interface ItemPedido { combustivel_id: string; quantidade_litros: number; fornecedor_id: string; preco_unitario: number }
+interface Base { id: string; nome: string; abreviacao: string }
+interface ItemPedido { combustivel_id: string; quantidade_litros: number; fornecedor_id: string; preco_unitario: number; base_id?: string }
 interface Pedido { id: string; posto_id: string; status: string; observacoes: string | null; data: string; created_at: string; posto?: { nome: string; abreviacao: string }; itens?: any[] }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -35,6 +36,7 @@ export default function PedidosPage() {
   const [postos, setPostos] = useState<Posto[]>([])
   const [combustiveis, setCombustiveis] = useState<Combustivel[]>([])
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
+  const [bases, setBases] = useState<Base[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [modalOpen, setModalOpen] = useState(false)
@@ -44,7 +46,7 @@ export default function PedidosPage() {
     data: new Date(), 
     itens: [] as ItemPedido[] 
   })
-  const [newItem, setNewItem] = useState({ combustivel_id: "", quantidade_litros: 0, fornecedor_id: "", preco_unitario: 0 })
+  const [newItem, setNewItem] = useState({ combustivel_id: "", quantidade_litros: 0, fornecedor_id: "", base_id: "", preco_unitario: 0 })
   
   const supabase = createClient()
 
@@ -52,26 +54,28 @@ export default function PedidosPage() {
     setLoading(true)
     const dateStr = formatDateToDB(selectedDate)
     
-    const [pedidosRes, postosRes, combRes, fornRes] = await Promise.all([
+    const [pedidosRes, postosRes, combRes, fornRes, basesRes] = await Promise.all([
       fetch(`/api/pedidos?data=${dateStr}`),
       fetch("/api/cadastros/postos"),
       fetch("/api/cadastros/combustiveis"),
       fetch("/api/cadastros/fornecedores"),
+      fetch("/api/cadastros/bases"),
     ])
     
     setPedidos(await pedidosRes.json())
     setPostos(await postosRes.json())
     setCombustiveis(await combRes.json())
     setFornecedores(await fornRes.json())
+    setBases(await basesRes.json())
     setLoading(false)
   }
 
   useEffect(() => { fetchData() }, [selectedDate])
 
   function addItem() {
-    if (!newItem.combustivel_id || !newItem.fornecedor_id || newItem.quantidade_litros <= 0) return
+    if (!newItem.combustivel_id || !newItem.fornecedor_id || !newItem.base_id || newItem.quantidade_litros <= 0) return
     setForm({ ...form, itens: [...form.itens, { ...newItem }] })
-    setNewItem({ combustivel_id: "", quantidade_litros: 0, fornecedor_id: "", preco_unitario: 0 })
+    setNewItem({ combustivel_id: "", quantidade_litros: 0, fornecedor_id: "", base_id: "", preco_unitario: 0 })
   }
 
   function removeItem(idx: number) {
@@ -204,6 +208,7 @@ export default function PedidosPage() {
                         <tr className="text-gray-500 dark:text-gray-400 text-left">
                           <th className="px-3 py-2 font-medium">Combustivel</th>
                           <th className="px-3 py-2 font-medium">Fornecedor</th>
+                          <th className="px-3 py-2 font-medium">Base</th>
                           <th className="px-3 py-2 text-right font-medium">Qtd (L)</th>
                           <th className="px-3 py-2 text-right font-medium">Preco Unit.</th>
                         </tr>
@@ -213,6 +218,7 @@ export default function PedidosPage() {
                           <tr key={idx} className="hover:bg-gray-50 dark:bg-gray-800">
                             <td className="px-3 py-2">{item.combustivel?.abreviacao || item.combustivel_id}</td>
                             <td className="px-3 py-2">{item.fornecedor?.nome || item.fornecedor_id}</td>
+                            <td className="px-3 py-2">{item.base?.abreviacao || item.base_id || "-"}</td>
                             <td className="px-3 py-2 text-right">{item.quantidade_litros?.toLocaleString("pt-BR")}</td>
                             <td className="px-3 py-2 text-right">R$ {item.preco_unitario?.toFixed(2)}</td>
                           </tr>
@@ -266,6 +272,10 @@ export default function PedidosPage() {
                       <option value="">Fornecedor</option>
                       {fornecedores.map((f) => (<option key={f.id} value={f.id}>{f.nome}</option>))}
                   </select>
+                  <select value={newItem.base_id} onChange={(e) => setNewItem({ ...newItem, base_id: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900">
+                      <option value="">Base</option>
+                      {bases.map((b) => (<option key={b.id} value={b.id}>{b.abreviacao}</option>))}
+                  </select>
                   <input type="number" step="0.01" placeholder="Preco Unit." value={newItem.preco_unitario || ""} onChange={(e) => setNewItem({ ...newItem, preco_unitario: parseFloat(e.target.value) })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
                 </div>
                 <button type="button" onClick={addItem} className="text-sm text-green-600 font-medium hover:text-green-800 transition-colors">+ Adicionar Item</button>
@@ -277,6 +287,7 @@ export default function PedidosPage() {
                         <tr className="text-gray-500 dark:text-gray-400 text-left">
                           <th className="px-3 py-2 font-medium">Combustivel</th>
                           <th className="px-3 py-2 font-medium">Fornecedor</th>
+                          <th className="px-3 py-2 font-medium">Base</th>
                           <th className="px-3 py-2 text-right font-medium">Qtd</th>
                           <th className="px-3 py-2 text-right font-medium">Preco</th>
                           <th className="px-3 py-2 text-right font-medium">Acao</th>
@@ -290,6 +301,7 @@ export default function PedidosPage() {
                             <tr key={idx} className="hover:bg-gray-50 dark:bg-gray-800">
                               <td className="px-3 py-2">{comb?.abreviacao}</td>
                               <td className="px-3 py-2">{forn?.nome}</td>
+                              <td className="px-3 py-2">{bases.find((b) => b.id === item.base_id)?.abreviacao || "-"}</td>
                               <td className="px-3 py-2 text-right">{item.quantidade_litros}</td>
                               <td className="px-3 py-2 text-right">R$ {item.preco_unitario.toFixed(2)}</td>
                               <td className="px-3 py-2 text-right">

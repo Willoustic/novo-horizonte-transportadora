@@ -27,6 +27,14 @@ export async function PUT(
   if (body.status) updateData.status = body.status
   if (body.observacoes !== undefined) updateData.observacao = body.observacoes
 
+  // Baixa de entrega exige data de entrega
+  if (body.status === "entregue" && !body.data_entrega) {
+    return NextResponse.json(
+      { error: "Data de entrega é obrigatória para baixar o pedido" },
+      { status: 400 }
+    )
+  }
+
   const { data, error } = await supabase
     .from("pedidos")
     .update(updateData)

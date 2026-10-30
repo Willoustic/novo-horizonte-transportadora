@@ -4,9 +4,11 @@ export interface ItemPedido {
   combustivel_id: string
   quantidade_litros: number
   fornecedor_id: string
+  base_id: string
   preco_unitario: number
   combustivel?: { nome: string; abreviacao: string }
   fornecedor?: { nome: string }
+  base?: { id: string; nome: string; abreviacao: string }
 }
 
 export interface Pedido {

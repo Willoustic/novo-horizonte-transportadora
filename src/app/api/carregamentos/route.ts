@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("carregamentos")
-    .select("*, posto_destino:postos(nome, abreviacao), motorista:motoristas(nome), cavalo:cavalos(placa), tanque_carreta:tanques_carreta(identificacao)")
+    .select("*, posto_destino:postos(nome, abreviacao), motorista:motoristas(nome), cavalo:cavalos(placa), tanque_carreta:tanques_carreta(identificacao), base:bases(nome, abreviacao)")
 
   if (data) {
     const start = `${data}T00:00:00.000Z`
@@ -24,9 +24,21 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient()
   const body = await request.json()
+  const { base_origem, ...rest } = body
+  // base_origem (texto) e mantido para compatibilidade; base_id e a FK nova
+  const insertData = { ...rest }
+  if (base_origem) {
+    // Resolve abreviacao da base para base_id
+    const { data: baseRes } = await supabase
+      .from("bases")
+      .select("id")
+      .eq("abreviacao", base_origem)
+      .single()
+    if (baseRes) insertData.base_id = baseRes.id
+  }
   const { data, error } = await supabase
     .from("carregamentos")
-    .insert(body)
+    .insert(insertData)
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
