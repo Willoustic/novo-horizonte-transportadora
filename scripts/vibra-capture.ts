@@ -351,6 +351,11 @@ async function main() {
   combustivelMap.set("gasolina comum c aditivada", combustivelMap.get("gasolina aditivada")!);
   combustivelMap.set("etanol hidratado combustivel", combustivelMap.get("etanol")!);
 
+  // Build base abreviacao -> id map for base_id FK lookup
+  const { data: basesData } = await supabase.from("bases").select("id, abreviacao");
+  const baseIdMap: Record<string, string> = {};
+  basesData?.forEach((b) => { baseIdMap[b.abreviacao] = b.id; });
+
   // Allow filtering by a single posto via --posto=ABREV.
   // "ALL" or empty means all active FILIAL postos.
   const postoArg = process.argv.find((a) => a.startsWith("--posto="));
@@ -374,13 +379,18 @@ async function main() {
         console.warn(`Combustível não mapeado: ${p.produto}`);
         continue;
       }
+      const baseId = baseIdMap[p.base];
+      if (!baseId) {
+        console.warn(`Base não encontrada no mapa: ${p.base}`);
+        continue;
+      }
       const { data: existing } = await supabase
         .from("cotacoes")
         .select("id, preco")
         .eq("posto_id", posto.id)
         .eq("combustivel_id", combustivelId)
         .eq("fornecedor_id", fornecedorId)
-        .eq("base", p.base)
+        .eq("base_id", baseId)
         .single();
 
       const now = new Date().toISOString();
@@ -394,7 +404,7 @@ async function main() {
         if (histError) console.error(`Erro histórico ${p.base}:`, histError.message);
         const { error: updError } = await supabase
           .from("cotacoes")
-          .update({ preco: p.preco, fonte: "vibra", data_registro: now, base: p.base })
+          .update({ preco: p.preco, fonte: "vibra", data_registro: now, base_id: baseId })
           .eq("id", existing.id);
         if (updError) console.error(`Erro update ${p.base}:`, updError.message);
       } else {
@@ -405,7 +415,7 @@ async function main() {
           preco: p.preco,
           fonte: "vibra",
           data_registro: now,
-          base: p.base,
+          base_id: baseId,
         });
         if (insError) console.error(`Erro insert ${p.base}:`, insError.message);
       }

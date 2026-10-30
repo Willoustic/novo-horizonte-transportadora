@@ -12,7 +12,8 @@ import { DataTable } from "@/components/shared/DataTable"
 interface Posto { id: string; nome: string; abreviacao: string }
 interface Combustivel { id: string; nome: string; abreviacao: string }
 interface Fornecedor { id: string; nome: string }
-interface Cotacao { id: string; posto_id: string; combustivel_id: string; fornecedor_id: string; preco: number; fonte: string; base?: string; data_registro: string; posto?: { nome: string; abreviacao: string }; combustivel?: { nome: string; abreviacao: string }; fornecedor?: { nome: string } }
+interface Base { id: string; nome: string; abreviacao: string }
+interface Cotacao { id: string; posto_id: string; combustivel_id: string; fornecedor_id: string; preco: number; fonte: string; base?: Base | null; data_registro: string; posto?: { nome: string; abreviacao: string }; combustivel?: { nome: string; abreviacao: string }; fornecedor?: { nome: string } }
 
 const FONTES: Record<string, string> = { vibra: "Vibra", whatsapp: "WhatsApp", manual: "Manual" }
 
@@ -21,6 +22,7 @@ export default function CotacoesPage() {
   const [postos, setPostos] = useState<Posto[]>([])
   const [combustiveis, setCombustiveis] = useState<Combustivel[]>([])
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
+  const [bases, setBases] = useState<Base[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [modalOpen, setModalOpen] = useState(false)
@@ -29,16 +31,17 @@ export default function CotacoesPage() {
   const [capturing, setCapturing] = useState(false)
   const [msg, setMsg] = useState("")
   const [captureStatus, setCaptureStatus] = useState<"idle" | "success" | "error">("idle")
-  const [form, setForm] = useState({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() })
+  const [form, setForm] = useState({ posto_id: "", combustivel_id: "", fornecedor_id: "", base_id: "", preco: 0, fonte: "manual", data: new Date() })
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     const dateStr = formatDateToDB(selectedDate)
-    const [cotRes, postosRes, combRes, fornRes] = await Promise.all([
+    const [cotRes, postosRes, combRes, fornRes, basesRes] = await Promise.all([
       fetch(`/api/cotacoes?data=${dateStr}`),
       fetch("/api/cadastros/postos"),
       fetch("/api/cadastros/combustiveis"),
       fetch("/api/cadastros/fornecedores"),
+      fetch("/api/cadastros/bases"),
     ])
     const responses = [cotRes, postosRes, combRes, fornRes]
     for (const res of responses) {
@@ -53,10 +56,12 @@ export default function CotacoesPage() {
     const postosJson = await postosRes.json().catch(() => null)
     const combJson = await combRes.json().catch(() => null)
     const fornJson = await fornRes.json().catch(() => null)
+    const basesJson = await basesRes.json().catch(() => null)
     setCotacoes(Array.isArray(cotJson) ? cotJson : [])
     setPostos(Array.isArray(postosJson) ? postosJson : [])
     setCombustiveis(Array.isArray(combJson) ? combJson : [])
     setFornecedores(Array.isArray(fornJson) ? fornJson : [])
+    setBases(Array.isArray(basesJson) ? basesJson : [])
     setLoading(false)
   }, [selectedDate])
 
@@ -75,7 +80,7 @@ export default function CotacoesPage() {
       return
     }
     setModalOpen(false)
-    setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() })
+    setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", base_id: "", preco: 0, fonte: "manual", data: new Date() })
     fetchData()
   }
 
@@ -126,7 +131,7 @@ export default function CotacoesPage() {
           <DatePicker date={selectedDate} onChange={setSelectedDate} />
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", preco: 0, fonte: "manual", data: new Date() }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+          <button onClick={() => { setForm({ posto_id: "", combustivel_id: "", fornecedor_id: "", base_id: "", preco: 0, fonte: "manual", data: new Date() }); setModalOpen(true) }} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
             + Nova Cotação
           </button>
           <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
@@ -146,7 +151,7 @@ export default function CotacoesPage() {
             { id: "posto", accessorFn: (row: any) => row.posto?.abreviacao || "-", header: "Posto", cell: ({ row }: any) => row.original.posto?.abreviacao || "-", enableColumnFilter: true },
             { id: "combustivel", accessorFn: (row: any) => row.combustivel?.abreviacao || "-", header: "Combustível", cell: ({ row }: any) => row.original.combustivel?.abreviacao || "-", enableColumnFilter: true },
             { id: "fornecedor", accessorFn: (row: any) => row.fornecedor?.nome || "-", header: "Fornecedor", cell: ({ row }: any) => row.original.fornecedor?.nome || "-", enableColumnFilter: true },
-            { id: "base", accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base || "-", enableColumnFilter: true },
+            { id: "base", accessorKey: "base", header: "Base", cell: ({ row }: any) => row.original.base?.abreviacao || "-", enableColumnFilter: true },
             { id: "preco", accessorKey: "preco", header: "Preço", cell: ({ row }: any) => `R$ ${row.original.preco?.toFixed(4)}` },
             { id: "fonte", accessorFn: (row: any) => FONTES[row.fonte] || row.fonte, header: "Fonte", cell: ({ row }: any) => FONTES[row.original.fonte] || row.original.fonte, enableColumnFilter: true },
             { id: "data", accessorFn: (row: any) => formatDateTimeBR(row.data_registro), header: "Data", cell: ({ row }: any) => formatDateTimeBR(row.original.data_registro), enableColumnFilter: true },
@@ -259,6 +264,13 @@ export default function CotacoesPage() {
                   <select value={form.fornecedor_id} onChange={(e) => setForm({ ...form, fornecedor_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
                     <option value="">Selecione...</option>
                     {fornecedores.map((f) => (<option key={f.id} value={f.id}>{f.nome}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Base</label>
+                  <select value={form.base_id} onChange={(e) => setForm({ ...form, base_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg" required>
+                    <option value="">Selecione...</option>
+                    {bases.map((b) => (<option key={b.id} value={b.id}>{b.abreviacao}</option>))}
                   </select>
                 </div>
                 <div>
