@@ -4,6 +4,7 @@
 > Última atualização: 2026-10-28
 
 ## Visão Geral
+
 Sistema web para controle de pedidos, carregamentos, estoque e cotações
 de combustível para 3 postos filiais + postos clientes.
 
@@ -14,45 +15,54 @@ Hospedagem: Gratuita (Vercel Free + Supabase Free)
 ## Índice de Documentação
 
 ### Contexto e Arquitetura
+
 - [00-overview.md](docs/00-overview.md) — Visão geral e contexto do negócio
 - [01-architecture.md](docs/01-architecture.md) — Arquitetura, stack e decisões técnicas
 - [08-deployment.md](docs/08-deployment.md) — Guia de deploy (Vercel + Supabase)
 
 ### Dados e Regras
+
 - [02-data-model.md](docs/02-data-model.md) — Schema do banco e entidades
 - [03-business-rules.md](docs/03-business-rules.md) — Regras de negócio
 - [05-roles-permissions.md](docs/05-roles-permissions.md) — Perfis e permissões
 
 ### Módulos e Funcionalidades
+
 - [04-modules.md](docs/04-modules.md) — Descrição de cada módulo
 - [09-parameters.md](docs/09-parameters.md) — Tela de Parâmetros
 - [10-pricing-rules.md](docs/10-pricing-rules.md) — Regras de preços e comparação
 - [13-ui-guidelines.md](docs/13-ui-guidelines.md) — Guia de UI (cores, componentes)
 
 ### Integrações e Roadmap
+
 - [06-integrations.md](docs/06-integrations.md) — Vibra, WhatsApp, planilhas
 - [07-roadmap.md](docs/07-roadmap.md) — Roadmap e fases
 - [11-spreadsheet-mapping.md](docs/11-spreadsheet-mapping.md) — Mapeamento planilha → sistema
 - [12-changelog.md](docs/12-changelog.md) — Changelog
 
 ## Postos Filiais
+
 1. PNH2-ZN — Posto Novo Horizonte e Comércio Derivados de Petróleo
 2. PNH1-ZS — Posto Transportes e Comércio Novo Horizonte
 3. VITORIA — Posto Vitória LTDA
 
 ## Combustíveis
+
 GC (Gasolina Comum), GA (Gasolina Aditivada), DS10 (Diesel S10),
 DS500/DC (Diesel S500), ET (Etanol)
 
 ## Fornecedores Iniciais
+
 Vibra, Setta, Larco, Petrovia
 
 ## Perfis de Acesso
+
 - admin: gestão de usuários + todas as funcionalidades
 - padrao: funcionalidades operacionais
 - restrito: sem acesso
 
 ## Convenções
+
 - Idioma do código: inglês (variáveis, funções, tabelas)
 - Idioma da UI: português (BR)
 - Idioma de resposta do assistente: sempre português (BR)
@@ -62,6 +72,7 @@ Vibra, Setta, Larco, Petrovia
 ## Status Atual (2026-10-28)
 
 ### Feito
+
 - Estrutura de 50 diretórios, configs, 14 docs, Memory.md, Agents.md, README.
 - Migrations: schema (18 tabelas), RLS por perfil, seed (3 filiais, 5 combustíveis, 4 fornecedores). Migrações 001-008 aplicadas no Supabase (ref qbltinupgfalplieohwv).
 - Cadastros: API + páginas para postos, combustíveis, fornecedores, motoristas, cavalos, tanques-carreta, tanques-posto (soft-delete).
@@ -77,6 +88,7 @@ Vibra, Setta, Larco, Petrovia
 - Deploy de produção na Vercel: dpl_9iZnP8bP8Zmx4f8V5ReZ76a1K19n, READY, https://nh-transportadora.vercel.app
 
 ### Correções aplicadas (2026-11-04, branch feature/db-backend-migrations-009-011)
+
 - src/app/api/emprestimos/route.ts: valida `data` por regex antes do .or() (evita injeção de filtro PostgREST).
 - src/app/api/pedidos/[id]/route.ts: GET inclui fornecedor e base nos itens; PUT remove bloqueio 400 de `data_entrega` (coluna inexistente).
 - src/app/api/cotacoes/route.ts: base_id vazio '' tratado como null (evita violação de FK).
@@ -86,5 +98,6 @@ Vibra, Setta, Larco, Petrovia
 - scripts/vibra-capture.ts: try/catch por iteração de base (falha numa base não aborta as demais); simularPreços usa baseline de texto antes do click (não captura preço de base cached/errada); diagnóstico (url/title/text) + screenshot nos erros.
 
 ### Próximo passo
+
 - Testes E2E e refinamentos de UI.
 - PNH2-ZN Vibra capture: portal não renderiza tabela de preços nem seletor de base (problema de conta/portal Vibra, não de código).

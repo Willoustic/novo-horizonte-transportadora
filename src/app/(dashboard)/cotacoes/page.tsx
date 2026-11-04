@@ -78,18 +78,22 @@ export default function CotacoesPage() {
     setLoading(true);
     try {
       const dateStr = formatDateToDB(selectedDate);
-      const [cotRes, postosRes, combRes, fornRes, basesRes] = await Promise.all([
-        fetch(`/api/cotacoes?data=${dateStr}`),
-        fetch("/api/cadastros/postos"),
-        fetch("/api/cadastros/combustiveis"),
-        fetch("/api/cadastros/fornecedores"),
-        fetch("/api/cadastros/bases"),
-      ]);
+      const [cotRes, postosRes, combRes, fornRes, basesRes] = await Promise.all(
+        [
+          fetch(`/api/cotacoes?data=${dateStr}`),
+          fetch("/api/cadastros/postos"),
+          fetch("/api/cadastros/combustiveis"),
+          fetch("/api/cadastros/fornecedores"),
+          fetch("/api/cadastros/bases"),
+        ],
+      );
       const responses = [cotRes, postosRes, combRes, fornRes, basesRes];
       for (const res of responses) {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          alert("Erro ao carregar dados: " + (err?.error || "erro desconhecido"));
+          alert(
+            "Erro ao carregar dados: " + (err?.error || "erro desconhecido"),
+          );
           setLoading(false);
           return;
         }
@@ -105,7 +109,10 @@ export default function CotacoesPage() {
       setFornecedores(Array.isArray(fornJson) ? fornJson : []);
       setBases(Array.isArray(basesJson) ? basesJson : []);
     } catch (err) {
-      alert("Erro inesperado ao carregar dados: " + (err instanceof Error ? err.message : "erro desconhecido"));
+      alert(
+        "Erro inesperado ao carregar dados: " +
+          (err instanceof Error ? err.message : "erro desconhecido"),
+      );
     } finally {
       setLoading(false);
     }
@@ -268,7 +275,7 @@ export default function CotacoesPage() {
               },
               {
                 id: "base",
-                accessorKey: "base",
+                accessorFn: (row: any) => row.original.base?.abreviacao || "-",
                 header: "Base",
                 cell: ({ row }: any) => row.original.base?.abreviacao || "-",
                 enableColumnFilter: true,
@@ -539,7 +546,7 @@ export default function CotacoesPage() {
                     step="0.0001"
                     value={form.preco}
                     onChange={(e) =>
-                      setForm({ ...form, preco: parseFloat(e.target.value) })
+                      setForm({ ...form, preco: parseFloat(e.target.value) || 0 })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
                     required

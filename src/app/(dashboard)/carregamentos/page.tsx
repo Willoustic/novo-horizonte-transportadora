@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Trash2, Plus } from "lucide-react";
 import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils";
+import { useCadastros } from "@/lib/use-cadastros";
 
 interface Carregamento {
   id: string;
@@ -77,18 +78,30 @@ export default function CarregamentosPage() {
           fetch("/api/cadastros/postos"),
           fetch("/api/cadastros/bases"),
         ]);
-      const carregData = await carregRes.json();
-      const motData = await motRes.json();
-      const cavData = await cavRes.json();
-      const tanqData = await tanqRes.json();
-      const postosData = await postosRes.json();
-      const basesData = await basesRes.json();
-      if (!carregRes.ok)
-        alert(carregData?.error || "Erro ao carregar carregamentos");
-      if (!motRes.ok) alert(motData?.error || "Erro ao carregar motoristas");
-      if (!cavRes.ok) alert(cavData?.error || "Erro ao carregar cavalos");
-      if (!tanqRes.ok) alert(tanqData?.error || "Erro ao carregar tanques");
-      if (!postosRes.ok) alert(postosData?.error || "Erro ao carregar postos");
+      const responses = [
+        carregRes,
+        motRes,
+        cavRes,
+        tanqRes,
+        postosRes,
+        basesRes,
+      ];
+      for (const res of responses) {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(
+            "Erro ao carregar dados: " + (err?.error || "erro desconhecido"),
+          );
+          setLoading(false);
+          return;
+        }
+      }
+      const carregData = await carregRes.json().catch(() => []);
+      const motData = await motRes.json().catch(() => []);
+      const cavData = await cavRes.json().catch(() => []);
+      const tanqData = await tanqRes.json().catch(() => []);
+      const postosData = await postosRes.json().catch(() => []);
+      const basesData = await basesRes.json().catch(() => []);
       setCarregamentos(Array.isArray(carregData) ? carregData : []);
       setMotoristas(Array.isArray(motData) ? motData : []);
       setCavalos(Array.isArray(cavData) ? cavData : []);
@@ -411,7 +424,7 @@ export default function CarregamentosPage() {
                     type="number"
                     value={form.volume}
                     onChange={(e) =>
-                      setForm({ ...form, volume: parseFloat(e.target.value) })
+                      setForm({ ...form, volume: parseFloat(e.target.value) || 0 })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
                     required

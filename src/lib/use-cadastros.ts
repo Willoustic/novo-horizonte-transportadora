@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { formatDateToDB } from "./date-utils";
 
 interface CadastrosBases {
   id: string;
@@ -44,14 +45,23 @@ export function useCadastros(date: Date) {
         fetch("/api/cadastros/bases"),
       ]);
 
-      const [postosOk, combOk, fornOk, basesOk] = await Promise.all([
-        postosRes.json().then(d => setPostos(Array.isArray(d) ? d : [])),
-        combRes.json().then(d => setCombustiveis(Array.isArray(d) ? d : [])),
-        fornRes.json().then(d => setFornecedores(Array.isArray(d) ? d : [])),
-        basesRes.json().then(d => setBases(Array.isArray(d) ? d : [])),
+      const [postosJson, combJson, fornJson, basesJson] = await Promise.all([
+        postosRes.json(),
+        combRes.json(),
+        fornRes.json(),
+        basesRes.json(),
       ]);
 
-      const allOk = postosOk && combOk && fornOk && basesOk;
+      setPostos(Array.isArray(postosJson) ? postosJson : []);
+      setCombustiveis(Array.isArray(combJson) ? combJson : []);
+      setFornecedores(Array.isArray(fornJson) ? fornJson : []);
+      setBases(Array.isArray(basesJson) ? basesJson : []);
+
+      const allOk =
+        postosJson.length > 0 &&
+        combJson.length > 0 &&
+        fornJson.length > 0 &&
+        basesJson.length > 0;
       setLoading(!allOk);
     }
 

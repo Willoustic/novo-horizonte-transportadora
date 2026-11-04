@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils";
+import { useCadastros } from "@/lib/use-cadastros";
 import {
   Trash2,
   Plus,
@@ -16,7 +17,6 @@ interface Posto {
   id: string;
   nome: string;
   abreviacao: string;
-  tipo: string;
 }
 interface Combustivel {
   id: string;
@@ -94,23 +94,16 @@ export default function PedidosPage() {
       setLoading(true);
       const dateStr = formatDateToDB(selectedDate);
 
-      const [pedidosRes, postosRes, combRes, fornRes, basesRes] =
-        await Promise.all([
-          fetch(`/api/pedidos?data=${dateStr}`),
-          fetch("/api/cadastros/postos"),
-          fetch("/api/cadastros/combustiveis"),
-          fetch("/api/cadastros/fornecedores"),
-          fetch("/api/cadastros/bases"),
-        ]);
+      const { postos: postosData, combustiveis: combData, fornecedores: fornData, bases: basesData } = useCadastros(selectedDate);
 
-      setPedidos(await pedidosRes.json());
-      setPostos(await postosRes.json());
-      setCombustiveis(await combRes.json());
-      setFornecedores(await fornRes.json());
-      await basesRes
-        .json()
-        .then(setBases)
-        .catch(() => setBases([]));
+      const pedidosRes = await fetch(`/api/pedidos?data=${dateStr}`);
+      const pedidosData = await pedidosRes.json().catch(() => []);
+
+      setPedidos(Array.isArray(pedidosData) ? pedidosData : []);
+      setPostos(Array.isArray(postosData) ? postosData : []);
+      setCombustiveis(Array.isArray(combData) ? combData : []);
+      setFornecedores(Array.isArray(fornData) ? fornData : []);
+      setBases(Array.isArray(basesData) ? basesData : []);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching data:", err);
