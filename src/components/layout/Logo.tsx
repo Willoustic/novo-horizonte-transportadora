@@ -1,5 +1,4 @@
-"use client";
-
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface LogoProps {
@@ -10,8 +9,15 @@ interface LogoProps {
 
 export function Logo({ className, width = 160, height = 40 }: LogoProps) {
   return (
-    <span className={cn("block", className)} role="img" aria-label="NH Transportadora">
-      NH Transportadora
-    </span>
+    <Image
+      src="/images/logo.jfif"
+      alt="NH Transportadora"
+      width={width}
+      height={height}
+      className={cn("block object-contain", className)}
+      role="img"
+      aria-label="NH Transportadora"
+      priority
+    />
   );
 }
