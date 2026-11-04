@@ -74,6 +74,7 @@ export default function PedidosPage() {
   const [bases, setBases] = useState<Base[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { postos: cadastrosPostos, combustiveis: cadastrosCombustiveis, fornecedores: cadastrosFornecedores, bases: cadastrosBases } = useCadastros(selectedDate);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({
     posto_id: "",
@@ -94,16 +95,14 @@ export default function PedidosPage() {
       setLoading(true);
       const dateStr = formatDateToDB(selectedDate);
 
-      const { postos: postosData, combustiveis: combData, fornecedores: fornData, bases: basesData } = useCadastros(selectedDate);
-
       const pedidosRes = await fetch(`/api/pedidos?data=${dateStr}`);
       const pedidosData = await pedidosRes.json().catch(() => []);
 
       setPedidos(Array.isArray(pedidosData) ? pedidosData : []);
-      setPostos(Array.isArray(postosData) ? postosData : []);
-      setCombustiveis(Array.isArray(combData) ? combData : []);
-      setFornecedores(Array.isArray(fornData) ? fornData : []);
-      setBases(Array.isArray(basesData) ? basesData : []);
+      setPostos(Array.isArray(cadastrosPostos) ? cadastrosPostos : []);
+      setCombustiveis(Array.isArray(cadastrosCombustiveis) ? cadastrosCombustiveis : []);
+      setFornecedores(Array.isArray(cadastrosFornecedores) ? cadastrosFornecedores : []);
+      setBases(Array.isArray(cadastrosBases) ? cadastrosBases : []);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching data:", err);
