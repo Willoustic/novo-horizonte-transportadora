@@ -1,6 +1,7 @@
 # 02 - Modelo de Dados
 
 ## Cadastros
+
 Posto: id, nome, abreviacao, tipo (FILIAL/CLIENTE), regiao, ativo, created_at
 Combustivel: id, nome, abreviacao, densidade (decimal), ativo
 Fornecedor: id, nome, telefone, tipo (vibra/whatsapp/outro), ativo
@@ -11,6 +12,7 @@ TanquePosto: id, posto_id (FK), numero (int), combustivel_id (FK), capacidade_li
 Usuario: id, nome, email (unique), senha_hash, perfil (admin/padrao/restrito), ativo, created_at
 
 ## Operacao
+
 EstoqueSnapshot: id, tanque_posto_id (FK), volume (decimal), data (date), created_at
 Entrega: id, tanque_posto_id (FK), volume (decimal), data (date), carregamento_id (FK, nullable)
 Pedido: id, posto_id (FK), data (date), status, observacao, criado_por (FK Usuario), created_at
@@ -20,14 +22,17 @@ MovimentacaoEstoque: id, tanque_posto_id (FK), tipo (entrada/saida/emprestimo/de
 Emprestimo: id, combustivel_id (FK), volume (decimal), posto_origem_id (FK), posto_destino_id (FK), data_emprestimo (date), data_devolucao (date, nullable), status (pendente/devolvido_parcial/devolvido), observacao, criado_por (FK Usuario)
 
 ## Precos
+
 Cotacao: id, posto_id (FK), combustivel_id (FK), fornecedor_id (FK), preco (decimal), fonte (vibra/whatsapp/manual), anexo_url (text, nullable), data_registro (timestamp), registrado_por (FK Usuario), ativo (boolean)
-  Constraint UNIQUE (posto_id, combustivel_id, fornecedor_id)
+Constraint UNIQUE (posto_id, combustivel_id, fornecedor_id)
 HistoricoPreco: id, cotacao_id (FK), preco_anterior (decimal), preco_novo (decimal), data_alteracao (timestamp), fonte, alterado_por (FK Usuario)
 
 ## Configuracao
+
 Parametro: id, grupo (vibra/gmail/whatsapp/geral), chave, valor (text, criptografado), descricao, atualizado_em (timestamp)
 
 ## RLS
+
 - admin: acesso total
 - padrao: acesso a operacao
 - restrito: sem acesso

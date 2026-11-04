@@ -1,16 +1,16 @@
-import { createClient } from "./server"
+import { createClient } from "./server";
 
-export type Perfil = "admin" | "padrao" | "restrito"
+export type Perfil = "admin" | "padrao" | "restrito";
 
 export interface UsuarioPerfil {
-  id: string
-  nome: string
-  email: string
-  perfil: Perfil
-  ativo: boolean
+  id: string;
+  nome: string;
+  email: string;
+  perfil: Perfil;
+  ativo: boolean;
 }
 
-type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
 /**
  * Busca o perfil do usuario na tabela `usuarios` usando o server client.
@@ -19,19 +19,19 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>
  */
 export async function getUserPerfil(
   supabase: SupabaseServer,
-  userId: string
+  userId: string,
 ): Promise<Perfil | null> {
   const { data, error } = await supabase
     .from("usuarios")
     .select("perfil")
     .eq("id", userId)
-    .single()
+    .single();
 
   if (error || !data) {
-    return null
+    return null;
   }
 
-  return (data.perfil ?? null) as Perfil | null
+  return (data.perfil ?? null) as Perfil | null;
 }
 
 /**
@@ -39,31 +39,31 @@ export async function getUserPerfil(
  */
 export async function getUsuarioById(
   supabase: SupabaseServer,
-  userId: string
+  userId: string,
 ): Promise<UsuarioPerfil | null> {
   const { data, error } = await supabase
     .from("usuarios")
     .select("id, nome, email, perfil, ativo")
     .eq("id", userId)
-    .single()
+    .single();
 
   if (error || !data) {
-    return null
+    return null;
   }
 
-  return data as UsuarioPerfil
+  return data as UsuarioPerfil;
 }
 
 /**
  * Verifica se o usuario tem acesso ao dashboard (perfil admin ou padrao).
  */
 export function temAcessoDashboard(perfil: Perfil | null): boolean {
-  return perfil === "admin" || perfil === "padrao"
+  return perfil === "admin" || perfil === "padrao";
 }
 
 /**
  * Verifica se o perfil e admin.
  */
 export function isAdmin(perfil: Perfil | null): boolean {
-  return perfil === "admin"
+  return perfil === "admin";
 }

@@ -30,9 +30,16 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
         if (!msg?.source) continue;
         const parsed = await simpleParser(msg.source);
         const subject = parsed.subject || "";
-        if (!subject.includes("Código de verificação para autenticação - Vibra Energia")) continue;
+        if (
+          !subject.includes(
+            "Código de verificação para autenticação - Vibra Energia",
+          )
+        )
+          continue;
         const text = parsed.text || "";
-        const match = text.match(/Utilize o código abaixo para concluir sua autenticação no Canal de Negócios:\s*\n?\s*(\d{6})/i);
+        const match = text.match(
+          /Utilize o código abaixo para concluir sua autenticação no Canal de Negócios:\s*\n?\s*(\d{6})/i,
+        );
         if (match) return match[1];
       }
       await new Promise((r) => setTimeout(r, 5000));
@@ -47,17 +54,27 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
 (async () => {
   const browser = await chromium.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--window-size=1920,1080"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--window-size=1920,1080",
+    ],
   });
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     locale: "pt-BR",
   });
   const page = await context.newPage();
 
   try {
-    await page.goto("https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(
+      "https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true",
+      { waitUntil: "domcontentloaded", timeout: 30000 },
+    );
     await page.waitForTimeout(3000);
 
     if (await page.$('input[name="username"]')) {
@@ -86,22 +103,34 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
     await page.waitForTimeout(5000);
 
     // Dump all <i> elements
-    const allI = await page.$$eval("i", els => els.map(e => ({ cls: e.className, text: e.textContent?.trim() })));
+    const allI = await page.$$eval("i", (els) =>
+      els.map((e) => ({ cls: e.className, text: e.textContent?.trim() })),
+    );
     console.log("ALL_I:", JSON.stringify(allI));
 
     // Dump elements containing BAGAM
-    const bagamEls = await page.$$eval("*", els => els.map(e => e.textContent?.trim()).filter(t => t && t.includes("BAGAM")));
+    const bagamEls = await page.$$eval("*", (els) =>
+      els
+        .map((e) => e.textContent?.trim())
+        .filter((t) => t && t.includes("BAGAM")),
+    );
     console.log("BAGAM_TEXTS:", JSON.stringify(bagamEls));
 
     // Dump all inputs
-    const allInputs = await page.$$eval("input", els => els.map(e => ({ id: e.id, ph: e.placeholder, cls: e.className })));
+    const allInputs = await page.$$eval("input", (els) =>
+      els.map((e) => ({ id: e.id, ph: e.placeholder, cls: e.className })),
+    );
     console.log("ALL_INPUTS:", JSON.stringify(allInputs));
 
     // Dump all buttons
-    const allBtns = await page.$$eval("button", els => els.map(e => e.textContent?.trim()).filter(Boolean));
+    const allBtns = await page.$$eval("button", (els) =>
+      els.map((e) => e.textContent?.trim()).filter(Boolean),
+    );
     console.log("ALL_BUTTONS:", JSON.stringify(allBtns));
 
-    await page.screenshot({ path: "C:\\Users\\POSTO NH\\Documents\\GitHub\\Transportadora\\tmp\\vibra-debug.png" });
+    await page.screenshot({
+      path: "C:\\Users\\POSTO NH\\Documents\\GitHub\\Transportadora\\tmp\\vibra-debug.png",
+    });
     console.log("Screenshot salvo");
   } catch (err) {
     console.error("Erro:", err);

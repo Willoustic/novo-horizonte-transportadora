@@ -1,5 +1,6 @@
 {
   "name": "novo-horizonte-transportadora",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "vibra:capture": "npx tsx scripts/vibra-capture.ts"
   },
   "dependencies": {
@@ -45,7 +47,9 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
     "postcss": "^8.4.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.5.0",
-    "tsx": "^4.23.15"
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
   }
 }

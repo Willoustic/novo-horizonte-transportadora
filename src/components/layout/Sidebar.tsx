@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
-type Perfil = "admin" | "padrao" | "restrito"
+type Perfil = "admin" | "padrao" | "restrito";
 
 interface SidebarProps {
-  perfil: Perfil
+  perfil: Perfil;
 }
 
-import { Logo } from "@/components/layout/Logo"
-import { useTheme } from "next-themes"
+import { Logo } from "@/components/layout/Logo";
+import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -28,8 +28,8 @@ import {
   LogOut,
   Moon,
   Sun,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -40,33 +40,33 @@ const NAV = [
   { href: "/cotacoes", label: "Cotacoes", icon: DollarSign },
   { href: "/cadastros", label: "Cadastros", icon: Users },
   { href: "/parametros", label: "Parametros", icon: Settings },
-]
+];
 
 export function Sidebar({ perfil }: SidebarProps) {
-  const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
-  const { theme, setTheme } = useTheme()
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
+  const { theme, setTheme } = useTheme();
 
-  const isAdmin = perfil === "admin"
+  const isAdmin = perfil === "admin";
 
   const visibleNav = NAV.filter((item) => {
     // restrito nao tem acesso a nada no sidebar (redirecionado no layout)
     if (perfil === "restrito") {
-      return false
+      return false;
     }
     // /parametros (e /usuarios, quando existir) so para admin
     if (item.href === "/parametros" && !isAdmin) {
-      return false
+      return false;
     }
-    return true
-  })
+    return true;
+  });
 
   async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push("/login")
-    router.refresh()
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
   }
 
   return (
@@ -96,7 +96,7 @@ export function Sidebar({ perfil }: SidebarProps) {
         className={cn(
           "fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-50 transform transition-transform duration-200 ease-out flex flex-col",
           "md:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
+          open ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
@@ -111,7 +111,7 @@ export function Sidebar({ perfil }: SidebarProps) {
         </div>
         <nav className="p-3 space-y-0.5 flex-1">
           {visibleNav.map((item) => {
-            const active = pathname === item.href
+            const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
@@ -121,13 +121,13 @@ export function Sidebar({ perfil }: SidebarProps) {
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
                   active
                     ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium"
-                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white",
                 )}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
               </Link>
-            )
+            );
           })}
         </nav>
         <div className="p-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
@@ -135,7 +135,11 @@ export function Sidebar({ perfil }: SidebarProps) {
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
             {theme === "dark" ? "Tema Claro" : "Tema Escuro"}
           </button>
           <button
@@ -148,5 +152,5 @@ export function Sidebar({ perfil }: SidebarProps) {
         </div>
       </aside>
     </>
-  )
+  );
 }

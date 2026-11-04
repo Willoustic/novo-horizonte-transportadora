@@ -1,6 +1,7 @@
 # 08 - Deploy (Vercel + Supabase)
 
 ## Visao geral
+
 - Frontend + API: Vercel (Free), deploy automatico via push na branch `master` (GitHub).
 - Banco/Auth/Storage: Supabase (Free), PostgreSQL + Auth + Storage.
 - Producao: https://nh-transportadora.vercel.app
@@ -12,20 +13,21 @@ Nunca commitar valores reais. `.env*` esta no `.gitignore`. Copie `.env.example`
 
 ### Para o `.env.local` (dev local — nunca commitar)
 
-| Variavel | Origem | Obs |
-|---|---|---|
-| NEXT_PUBLIC_SUPABASE_URL | Supabase Dashboard > Settings > API | URL do projeto |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase Dashboard > Settings > API | Anon key (public) |
-| SUPABASE_SERVICE_ROLE_KEY | Supabase Dashboard > Settings > API | **Segredo.** Server-side only (scripts) |
-| ENCRYPTION_KEY | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | AES-256-GCM, 64 hex chars |
-| NEXT_PUBLIC_APP_URL | http://localhost:3000 (dev) | Base URL da app |
-| GITHUB_TOKEN | GitHub > Settings > Developer settings > Personal access tokens | PAT com acesso a Actions (repo) |
-| GITHUB_REPO_OWNER | Willoustic | Dono do repo |
-| GITHUB_REPO_NAME | novo-horizonte-transportadora | Nome do repo |
+| Variavel                      | Origem                                                                     | Obs                                     |
+| ----------------------------- | -------------------------------------------------------------------------- | --------------------------------------- |
+| NEXT_PUBLIC_SUPABASE_URL      | Supabase Dashboard > Settings > API                                        | URL do projeto                          |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase Dashboard > Settings > API                                        | Anon key (public)                       |
+| SUPABASE_SERVICE_ROLE_KEY     | Supabase Dashboard > Settings > API                                        | **Segredo.** Server-side only (scripts) |
+| ENCRYPTION_KEY                | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | AES-256-GCM, 64 hex chars               |
+| NEXT_PUBLIC_APP_URL           | http://localhost:3000 (dev)                                                | Base URL da app                         |
+| GITHUB_TOKEN                  | GitHub > Settings > Developer settings > Personal access tokens            | PAT com acesso a Actions (repo)         |
+| GITHUB_REPO_OWNER             | Willoustic                                                                 | Dono do repo                            |
+| GITHUB_REPO_NAME              | novo-horizonte-transportadora                                              | Nome do repo                            |
 
 ### Para o Vercel (Painel > Project > Settings > Environment Variables)
 
 Producao e Preview:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `ENCRYPTION_KEY`
@@ -37,6 +39,7 @@ Nao adicionar `SUPABASE_SERVICE_ROLE_KEY` ao Vercel a menos que uma rota server-
 ### Para secrets do GitHub (repositorio > Settings > Secrets and variables > Actions)
 
 Usados pelo workflow `.github/workflows/vibra-capture.yml`:
+
 - `ENCRYPTION_KEY`
 - `SUPABASE_URL` (mapeado para `NEXT_PUBLIC_SUPABASE_URL` no workflow)
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -48,6 +51,7 @@ Usados pelo workflow `.github/workflows/vibra-capture.yml`:
 Migrations estao em `supabase/migrations/` (numeradas: 001_ a 007_, sem gaps). Aplicar em ordem; em banco existente, nao pular numeracao.
 
 Opcao A — Supabase CLI:
+
 ```
 npx supabase login
 npx supabase link --project-ref <projeto-ref>
@@ -55,6 +59,7 @@ npx supabase db push
 ```
 
 Opcao B — SQL Editor (Supabase Dashboard):
+
 1. Abrir Supabase Dashboard > SQL Editor.
 2. Executar os arquivos em ordem: `001_initial_schema.sql`, `002_rls_policies.sql`, `003_seed_data.sql`, `004_add_base_to_cotacoes.sql`, `005_add_pedido_status_values.sql`, `006_add_data_columns.sql`, `007_remove_vibra.sql`.
 3. Verificar RLS ativo em todas as tabelas (perfil admin/padrao/restrito).
@@ -64,12 +69,14 @@ Sempre aplicar RLS. Nao pular migrations.
 ## vibra-capture (GitHub Actions)
 
 Workflow `.github/workflows/vibra-capture.yml` presente e testado via `workflow_dispatch`. Disparo:
+
 1. GitHub > Actions > vibra-capture > Run workflow.
 2. Informar `posto` (abreviacao, ex: VIT, ZN) ou deixar vazio/`ALL` para todos os postos FILIAIS ativos.
 3. Informar `data` (YYYY-MM-DD) opcional: a rota `POST /api/vibra/capturar` deleta lançamentos `fonte='vibra'` dessa data antes de disparar a captura.
 4. A rota `POST /api/vibra/capturar` tambem dispara o workflow via `GITHUB_TOKEN` + `workflow_dispatch`.
 
 Comportamento do script `scripts/vibra-capture.ts`:
+
 - `--posto=ALL` ou vazio = todos os postos FILIAIS ativos (nao filtra por abreviacao "ALL").
 - `--posto=ABREV` = filtra por abreviacao do posto.
 - Loga preços capturados por posto e base.
