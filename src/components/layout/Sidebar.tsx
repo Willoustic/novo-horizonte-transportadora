@@ -65,6 +65,7 @@ export function Sidebar({ perfil }: SidebarProps) {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    setTheme("light");
     router.push("/login");
     router.refresh();
   }

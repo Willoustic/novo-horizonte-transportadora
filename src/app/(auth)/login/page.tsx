@@ -4,16 +4,13 @@ import { Logo } from "@/components/layout/Logo";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { Moon, Sun } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const supabase = createClient();
 
@@ -39,10 +36,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className={cn(
-        "min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors duration-300",
-        theme === "dark" ? "dark" : "",
-      )}
+      className="min-h-screen flex items-center justify-center bg-gray-50 transition-colors duration-300"
     >
       <div className="w-full max-w-md px-4 py-8 sm:px-6 lg:py-12">
         <div
@@ -51,24 +45,11 @@ export default function LoginPage() {
             "border-gray-200 dark:border-gray-700",
           )}
         >
-          <div className="flex justify-between items-center mb-8">
-            <div className="text-center flex-1">
-              <Logo width={180} height={45} className="mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                NH Transportadora
-              </p>
-            </div>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              aria-label={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </button>
+          <div className="text-center mb-8">
+            <Logo width={180} height={45} className="mx-auto mb-2" />
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+              NH Transportadora
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
