@@ -1,9 +1,10 @@
 "use client";
 
 import { Logo } from "@/components/layout/Logo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
@@ -11,8 +12,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { setTheme } = useTheme();
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    setTheme("light");
+  }, [setTheme]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
