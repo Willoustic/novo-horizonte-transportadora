@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles"
 
 export async function GET(
   request: Request,
@@ -7,12 +8,18 @@ export async function GET(
 ) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
   const { data, error } = await supabase
     .from("pedidos")
-    .select("*, posto:postos(nome, abreviacao), itens:itens_pedido(*, combustivel:combustiveis(nome, abreviacao))")
+    .select("*, posto:postos(nome, abreviacao), itens:itens_pedido(*, combustivel:combustiveis(nome, abreviacao), fornecedor:fornecedores(nome), base:bases(nome, abreviacao))")
     .eq("id", id)
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+  if (error) return NextResponse.json({ error: "Pedido não encontrado" }, { status: 404 })
   return NextResponse.json(data)
 }
 
@@ -22,18 +29,16 @@ export async function PUT(
 ) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
   const body = await request.json()
-  const updateData: any = {}
+  const updateData: Record<string, unknown> = {}
   if (body.status) updateData.status = body.status
   if (body.observacoes !== undefined) updateData.observacao = body.observacoes
-
-  // Baixa de entrega exige data de entrega
-  if (body.status === "entregue" && !body.data_entrega) {
-    return NextResponse.json(
-      { error: "Data de entrega é obrigatória para baixar o pedido" },
-      { status: 400 }
-    )
-  }
 
   const { data, error } = await supabase
     .from("pedidos")
@@ -41,7 +46,7 @@ export async function PUT(
     .eq("id", id)
     .select()
     .single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: "Erro ao atualizar pedido" }, { status: 500 })
   return NextResponse.json(data)
 }
 
@@ -51,11 +56,18 @@ export async function DELETE(
 ) {
   const { id } = await params
   const supabase = await createClient()
-  await supabase.from("itens_pedido").delete().eq("pedido_id", id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
+
   const { error } = await supabase
     .from("pedidos")
     .delete()
     .eq("id", id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: "Erro ao excluir pedido" }, { status: 500 })
   return NextResponse.json({ success: true })
 }

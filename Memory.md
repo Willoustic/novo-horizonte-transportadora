@@ -76,6 +76,15 @@ Vibra, Setta, Larco, Petrovia
 - Commit 7dbb0f2 pushado ao GitHub master.
 - Deploy de produção na Vercel: dpl_9iZnP8bP8Zmx4f8V5ReZ76a1K19n, READY, https://nh-transportadora.vercel.app
 
+### Correções aplicadas (2026-11-04, branch feature/db-backend-migrations-009-011)
+- src/app/api/emprestimos/route.ts: valida `data` por regex antes do .or() (evita injeção de filtro PostgREST).
+- src/app/api/pedidos/[id]/route.ts: GET inclui fornecedor e base nos itens; PUT remove bloqueio 400 de `data_entrega` (coluna inexistente).
+- src/app/api/cotacoes/route.ts: base_id vazio '' tratado como null (evita violação de FK).
+- src/app/api/cotacoes/[id]/route.ts: GET inclui base:bases(nome,abreviacao).
+- src/app/(dashboard)/{pedidos,carregamentos,cotacoes}/page.tsx: setBases com .catch(() => []); fetchData() awaited após POST/PUT/DELETE (sem dado estale).
+- supabase/migrations/009 e 011: tabela auditoria_base_migracao arquiva valores de base/base_origem fora da seed antes do DROP COLUMN (sem perda irreversível).
+- scripts/vibra-capture.ts: try/catch por iteração de base (falha numa base não aborta as demais); simularPreços usa baseline de texto antes do click (não captura preço de base cached/errada); diagnóstico (url/title/text) + screenshot nos erros.
+
 ### Próximo passo
-- Testes E2E e refinamentos de UI (modal de confirmação de preço duplicado, histórico de preços).
+- Testes E2E e refinamentos de UI.
 - PNH2-ZN Vibra capture: portal não renderiza tabela de preços nem seletor de base (problema de conta/portal Vibra, não de código).

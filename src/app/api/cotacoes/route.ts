@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const data = searchParams.get("data")
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
 
   let query = supabase
     .from("cotacoes")
@@ -27,6 +36,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
   const body = await request.json()
   const { posto_id, combustivel_id, fornecedor_id, preco, fonte, anexo_url, base_id, data_registro } = body
 
@@ -41,10 +57,11 @@ export async function POST(request: Request) {
     .eq("combustivel_id", combustivel_id)
     .eq("fornecedor_id", fornecedor_id)
 
-  if (base_id == null) {
+  const baseIdFiltrado = base_id == null || base_id === "" ? null : base_id
+  if (baseIdFiltrado === null) {
     existingQuery = existingQuery.is("base_id", null)
   } else {
-    existingQuery = existingQuery.eq("base_id", base_id)
+    existingQuery = existingQuery.eq("base_id", baseIdFiltrado)
   }
 
   const { data: existingRows } = await existingQuery
@@ -60,7 +77,7 @@ export async function POST(request: Request) {
     })
     const { data, error } = await supabase
       .from("cotacoes")
-      .update({ preco, fonte: fonte || existing.fonte, anexo_url: anexo_url || existing.anexo_url, base_id: base_id ?? existing.base_id, data_registro: dataRegistro })
+      .update({ preco, fonte: fonte || existing.fonte, anexo_url: anexo_url || existing.anexo_url, base_id: baseIdFiltrado ?? existing.base_id, data_registro: dataRegistro })
       .eq("id", existing.id)
       .select()
       .single()
@@ -70,7 +87,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("cotacoes")
-    .insert({ posto_id, combustivel_id, fornecedor_id, preco, fonte: fonte || "manual", anexo_url, base_id: base_id ?? null, data_registro: dataRegistro })
+    .insert({ posto_id, combustivel_id, fornecedor_id, preco, fonte: fonte || "manual", anexo_url, base_id: baseIdFiltrado ?? null, data_registro: dataRegistro })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

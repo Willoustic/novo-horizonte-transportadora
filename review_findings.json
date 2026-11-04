@@ -1,0 +1,92 @@
+[
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 88,
+    "summary": "Bases fetch removes Array.isArray guard; .catch(()=>[]) ineffectual",
+    "failure_scenario": "/api/cadastros/bases returns non-array JSON error body → setBases(object) → bases.map() crashes TypeError, page breaks blank"
+  },
+  {
+    "file": "src/app/(dashboard)/pedidos/page.tsx",
+    "line": 69,
+    "summary": "Same Array.isArray removal in pedidos fetchData",
+    "failure_scenario": "Non-array error JSON from /api/cadastros/bases → setBases(object) → bases.find()/bases.map() crashes TypeError on Pedidos page render"
+  },
+  {
+    "file": "src/app/(dashboard)/pedidos/page.tsx",
+    "line": 76,
+    "summary": "NaN quantity guard bypass; parseFloat('') → NaN",
+    "failure_scenario": "User clears qtd input → parseFloat('')=NaN → NaN<=0 is false → addItem passes → NaN item added to itens → JSON.stringify(NaN)=null → backend z.number().positive() returns 400 or null silently stored"
+  },
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 96,
+    "summary": "handleSubmit POST error swallowed; no res.ok check",
+    "failure_scenario": "fetch fails → modal closes, form resets, user sees success message, carregamento never created, error completely hidden"
+  },
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 107,
+    "summary": "handleStatusChange PUT error swallowed; no res.ok check",
+    "failure_scenario": "Status change fails silently → table refetch shows unchanged status → user unaware of failure"
+  },
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 117,
+    "summary": "handleDelete DELETE error swallowed; no res.ok check",
+    "failure_scenario": "Delete fails silently → table refetch shows record still present → user believes it was deleted but it remains"
+  },
+  {
+    "file": "src/app/(dashboard)/cotacoes/page.tsx",
+    "line": 59,
+    "summary": "basesRes outside .ok loop; .json().catch(()=>null) engole erros",
+    "failure_scenario": "bases endpoint fails → Base select has no options (required field) → form cannot submit, user gets no error message, UX freeze"
+  },
+  {
+    "file": "src/app/(dashboard)/cotacoes/page.tsx",
+    "line": 102,
+    "summary": "setTimeout bandaid after Vibra capture; not awaited",
+    "failure_scenario": "Prices remain stale after capture; if component unmounts before 2s, data never refetches → table stuck with outdated prices"
+  },
+  {
+    "file": "src/app/(dashboard)/cotacoes/page.tsx",
+    "line": 151,
+    "summary": "accessorFn reads row.fonte/posto/combustível top-level vs cell row.original.*",
+    "failure_scenario": "Sort/filter on those columns silently read undefined → UI appears normal but ordering/filtering broken without user notice"
+  },
+  {
+    "file": "src/app/(dashboard)/cotacoes/page.tsx",
+    "line": 278,
+    "summary": "Empty preço → NaN → 'R$ undefined' in table cell",
+    "failure_scenario": "User leaves preço field empty → parseFloat('')=NaN → JSON.stringify(NaN)=null → cell renders 'R$ undefined' visually confusing"
+  },
+  {
+    "file": "src/app/(dashboard)/page.tsx",
+    "line": 54,
+    "summary": "Multi-base capability lost; c.base_origem → c.base?.abreviacao",
+    "failure_scenario": "Dashboard 'Bases' column shows only one base per carregamento even when multiple bases applied; comma-joined multi-base text from old schema no longer readable"
+  },
+  {
+    "file": "src/app/(dashboard)/cotacoes/page.tsx",
+    "line": 84,
+    "summary": "Inconsistent fetch error handling; basesRes outside .ok loop",
+    "failure_scenario": "bases fetch failure silently ignored (stale/empty bases, no alert) while postos/combustiveis/fornecedores failures surface alerts → inconsistent UX and harder to maintain uniform error behavior"
+  },
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 160,
+    "summary": "DataTable loading={false} hardcoded; masks real loading state",
+    "failure_scenario": "Local loading state exists but DataTable always renders its own central skeleton never → misleading loading indication, state wiring error"
+  },
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 212,
+    "summary": "Base <select> duplicated across 3 pages",
+    "failure_scenario": "Changing base label/option format requires editing 3 components (carregamentos + cotacoes + pedidos); high copy-paste maintenance risk"
+  },
+  {
+    "file": "src/app/(dashboard)/carregamentos/page.tsx",
+    "line": 61,
+    "summary": "fetchData pattern duplicated across 3 pages",
+    "failure_scenario": "Adding new cadastro field requires editing 3 near-identical fetchData bodies (carregamentos + cotacoes + pedidos); high copy-paste maintenance risk, drift prone"
+  }
+]

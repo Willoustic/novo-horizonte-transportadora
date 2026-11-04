@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles"
 
 export async function GET(
   request: Request,
@@ -7,6 +8,12 @@ export async function GET(
 ) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
   const { data, error } = await supabase
     .from("carregamentos")
     .select("*, posto_destino:postos(nome, abreviacao), motorista:motoristas(nome), cavalo:cavalos(placa), tanque_carreta:tanques_carreta(identificacao)")
@@ -22,6 +29,12 @@ export async function PUT(
 ) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
   const body = await request.json()
   const { base_origem, base_id, ...rest } = body
   const updateData: any = { ...rest }
@@ -50,6 +63,12 @@ export async function DELETE(
 ) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const perfil = await getUserPerfil(supabase, user.id)
+  if (!temAcessoDashboard(perfil)) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 })
+  }
   const { error } = await supabase
     .from("carregamentos")
     .delete()

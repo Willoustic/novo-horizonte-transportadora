@@ -53,6 +53,33 @@ BEGIN
   END IF;
 END $$;
 
+-- Tabela de auditoria: preserva valores de base que nao bateram com a seed (BAGAM/ARCAB/AISUAP)
+CREATE TABLE IF NOT EXISTS auditoria_base_migracao (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tabela_origem TEXT NOT NULL,
+  coluna_origem TEXT NOT NULL,
+  valor_original TEXT NOT NULL,
+  registro_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE auditoria_base_migracao ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS auditoria_base_migracao_select ON auditoria_base_migracao FOR SELECT
+  USING (get_user_perfil() IN ('admin', 'padrao'));
+CREATE POLICY IF NOT EXISTS auditoria_base_migracao_insert ON auditoria_base_migracao FOR INSERT
+  WITH CHECK (get_user_perfil() IN ('admin', 'padrao'));
+CREATE POLICY IF NOT EXISTS auditoria_base_migracao_update ON auditoria_base_migracao FOR UPDATE
+  USING (get_user_perfil() = 'admin');
+CREATE POLICY IF NOT EXISTS auditoria_base_migracao_delete ON auditoria_base_migracao FOR DELETE
+  USING (get_user_perfil() = 'admin');
+
+-- Arquiva valores nao-mapeados antes de destruir a coluna
+INSERT INTO auditoria_base_migracao (tabela_origem, coluna_origem, valor_original, registro_id)
+SELECT 'cotacoes', 'base', c.base, c.id
+FROM cotacoes c
+WHERE c.base IS NOT NULL
+  AND c.base <> ''
+  AND NOT EXISTS (SELECT 1 FROM bases b WHERE b.abreviacao = c.base);
+
 -- Remove coluna base TEXT antiga
 ALTER TABLE cotacoes DROP COLUMN IF EXISTS base;
 
