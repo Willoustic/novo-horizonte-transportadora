@@ -336,7 +336,7 @@ export default function CarregamentosPage() {
                     onChange={(e) =>
                       setForm({ ...form, posto_destino_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -365,7 +365,7 @@ export default function CarregamentosPage() {
                     onChange={(e) =>
                       setForm({ ...form, motorista_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -385,7 +385,7 @@ export default function CarregamentosPage() {
                     onChange={(e) =>
                       setForm({ ...form, cavalo_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -405,7 +405,7 @@ export default function CarregamentosPage() {
                     onChange={(e) =>
                       setForm({ ...form, tanque_carreta_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -426,7 +426,7 @@ export default function CarregamentosPage() {
                     onChange={(e) =>
                       setForm({ ...form, volume: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   />
                 </div>
@@ -439,7 +439,7 @@ export default function CarregamentosPage() {
                     onChange={(e) =>
                       setForm({ ...form, base_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
                     <option value="">Selecione...</option>
                     {bases.map((b) => (

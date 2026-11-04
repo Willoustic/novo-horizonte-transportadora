@@ -240,7 +240,7 @@ export default function EmprestimosPage() {
                     onChange={(e) =>
                       setForm({ ...form, combustivel_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -261,7 +261,7 @@ export default function EmprestimosPage() {
                     onChange={(e) =>
                       setForm({ ...form, volume: parseFloat(e.target.value) })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   />
                 </div>
@@ -274,7 +274,7 @@ export default function EmprestimosPage() {
                     onChange={(e) =>
                       setForm({ ...form, posto_origem_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -294,7 +294,7 @@ export default function EmprestimosPage() {
                     onChange={(e) =>
                       setForm({ ...form, posto_destino_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -324,7 +324,7 @@ export default function EmprestimosPage() {
                     onChange={(e) =>
                       setForm({ ...form, observacao: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>

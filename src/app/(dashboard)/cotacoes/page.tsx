@@ -466,7 +466,7 @@ export default function CotacoesPage() {
                     onChange={(e) =>
                       setForm({ ...form, posto_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -486,7 +486,7 @@ export default function CotacoesPage() {
                     onChange={(e) =>
                       setForm({ ...form, combustivel_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -506,7 +506,7 @@ export default function CotacoesPage() {
                     onChange={(e) =>
                       setForm({ ...form, fornecedor_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -526,7 +526,7 @@ export default function CotacoesPage() {
                     onChange={(e) =>
                       setForm({ ...form, base_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -548,7 +548,7 @@ export default function CotacoesPage() {
                     onChange={(e) =>
                       setForm({ ...form, preco: parseFloat(e.target.value) || 0 })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   />
                 </div>
@@ -561,7 +561,7 @@ export default function CotacoesPage() {
                     onChange={(e) =>
                       setForm({ ...form, fonte: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
                     <option value="manual">Manual</option>
                     <option value="vibra">Vibra</option>

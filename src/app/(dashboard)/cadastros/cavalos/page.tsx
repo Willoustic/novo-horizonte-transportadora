@@ -94,7 +94,7 @@ export default function CavalosPage() {
                 <input
                   value={form.placa}
                   onChange={(e) => setForm({ ...form, placa: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   required
                 />
               </div>
@@ -105,7 +105,7 @@ export default function CavalosPage() {
                 <input
                   value={form.modelo}
                   onChange={(e) => setForm({ ...form, modelo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 />
               </div>
               <div>
@@ -118,7 +118,7 @@ export default function CavalosPage() {
                   onChange={(e) =>
                     setForm({ ...form, ano: parseInt(e.target.value) })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 />
               </div>
               <div className="flex justify-end space-x-2">

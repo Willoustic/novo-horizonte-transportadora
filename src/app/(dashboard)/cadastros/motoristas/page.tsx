@@ -106,7 +106,7 @@ export default function MotoristasPage() {
                 <input
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   required
                 />
               </div>
@@ -117,7 +117,7 @@ export default function MotoristasPage() {
                 <input
                   value={form.cnh}
                   onChange={(e) => setForm({ ...form, cnh: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 />
               </div>
               <div>
@@ -129,7 +129,7 @@ export default function MotoristasPage() {
                   onChange={(e) =>
                     setForm({ ...form, categoria: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 />
               </div>
               <div>
@@ -142,7 +142,7 @@ export default function MotoristasPage() {
                   onChange={(e) =>
                     setForm({ ...form, validade_cnh: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 />
               </div>
               <div className="flex justify-end space-x-2">

@@ -98,7 +98,7 @@ export default function CombustiveisPage() {
                 <input
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   required
                 />
               </div>
@@ -111,7 +111,7 @@ export default function CombustiveisPage() {
                   onChange={(e) =>
                     setForm({ ...form, abreviacao: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   required
                 />
               </div>
@@ -126,7 +126,7 @@ export default function CombustiveisPage() {
                   onChange={(e) =>
                     setForm({ ...form, densidade: parseFloat(e.target.value) })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   required
                 />
               </div>

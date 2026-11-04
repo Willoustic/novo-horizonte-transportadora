@@ -270,7 +270,7 @@ export default function PedidosPage() {
                       onChange={(e) =>
                         handleStatusChange(pedido.id, e.target.value)
                       }
-                      className="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-900"
+                      className="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     >
                       {Object.entries(STATUS_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>
@@ -369,7 +369,7 @@ export default function PedidosPage() {
                     onChange={(e) =>
                       setForm({ ...form, posto_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                     required
                   >
                     <option value="">Selecione...</option>
@@ -401,7 +401,7 @@ export default function PedidosPage() {
                     onChange={(e) =>
                       setNewItem({ ...newItem, combustivel_id: e.target.value })
                     }
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
                     <option value="">Combustivel</option>
                     {combustiveis.map((c) => (
@@ -420,14 +420,14 @@ export default function PedidosPage() {
                         quantidade_litros: parseFloat(e.target.value),
                       })
                     }
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   />
                   <select
                     value={newItem.fornecedor_id}
                     onChange={(e) =>
                       setNewItem({ ...newItem, fornecedor_id: e.target.value })
                     }
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
                     <option value="">Fornecedor</option>
                     {fornecedores.map((f) => (
@@ -441,7 +441,7 @@ export default function PedidosPage() {
                     onChange={(e) =>
                       setNewItem({ ...newItem, base_id: e.target.value })
                     }
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
                     <option value="">Base</option>
                     {bases.map((b) => (
@@ -461,7 +461,7 @@ export default function PedidosPage() {
                         preco_unitario: parseFloat(e.target.value),
                       })
                     }
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   />
                 </div>
                 <button
@@ -543,7 +543,7 @@ export default function PedidosPage() {
                   onChange={(e) =>
                     setForm({ ...form, observacoes: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   rows={2}
                 />
               </div>
