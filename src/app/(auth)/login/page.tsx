@@ -51,24 +51,24 @@ export default function LoginPage() {
             "border-gray-200 dark:border-gray-700",
           )}
         >
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2">
-              <Logo width={130} height={40} className="text-gray-900 dark:text-white" />
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                aria-label={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
-                className="ml-2 p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </button>
+          <div className="flex justify-between items-start mb-6">
+            <div className="text-center">
+              <Logo width={160} height={40} className="mx-auto" />
+              <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                NH Transportadora
+              </p>
             </div>
-            <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">
-              Transportadora de Combustiveis
-            </p>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro"}
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
