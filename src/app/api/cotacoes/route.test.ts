@@ -57,7 +57,7 @@ const mockSupabase = {
   },
 };
 
-vi.mocked(createClient).mockResolvedValue(mockSupabase);
+vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
 describe("cotacoes API route auth", () => {
   it("GET should return 401 when no user", async () => {
