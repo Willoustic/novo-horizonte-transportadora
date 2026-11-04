@@ -12,7 +12,6 @@ interface SidebarProps {
   perfil: Perfil;
 }
 
-import { Logo } from "@/components/layout/Logo";
 import { useTheme } from "next-themes";
 import {
   LayoutDashboard,
@@ -81,7 +80,9 @@ export function Sidebar({ perfil }: SidebarProps) {
         >
           <Menu className="h-5 w-5 text-gray-700 dark:text-gray-200" />
         </button>
-        <Logo className="ml-3" width={120} height={40} />
+        <span className="ml-3 text-sm font-bold text-green-700 dark:text-white">
+          NH Transportadora
+        </span>
       </header>
 
       {/* Overlay */}
@@ -101,7 +102,9 @@ export function Sidebar({ perfil }: SidebarProps) {
         )}
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-          <Logo width={100} height={33} />
+          <span className="text-sm font-bold text-green-700 dark:text-white">
+            NH Transportadora
+          </span>
           <button
             onClick={() => setOpen(false)}
             className="md:hidden p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"

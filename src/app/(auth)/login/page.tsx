@@ -53,8 +53,8 @@ export default function LoginPage() {
         >
           <div className="text-center mb-8">
             <Logo width={180} height={45} className="mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-              NH Transportadora
+            <p className="text-sm font-bold text-green-700">
+              NH Transportes
             </p>
           </div>
 
