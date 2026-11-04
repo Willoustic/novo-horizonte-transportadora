@@ -22,14 +22,38 @@ CREATE TABLE IF NOT EXISTS auditoria_base_migracao (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE auditoria_base_migracao ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS auditoria_base_migracao_select ON auditoria_base_migracao FOR SELECT
-  USING (get_user_perfil() IN ('admin', 'padrao'));
-CREATE POLICY IF NOT EXISTS auditoria_base_migracao_insert ON auditoria_base_migracao FOR INSERT
-  WITH CHECK (get_user_perfil() IN ('admin', 'padrao'));
-CREATE POLICY IF NOT EXISTS auditoria_base_migracao_update ON auditoria_base_migracao FOR UPDATE
-  USING (get_user_perfil() = 'admin');
-CREATE POLICY IF NOT EXISTS auditoria_base_migracao_delete ON auditoria_base_migracao FOR DELETE
-  USING (get_user_perfil() = 'admin');
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auditoria_base_migracao_select' AND tablename = 'auditoria_base_migracao') THEN
+    CREATE POLICY auditoria_base_migracao_select ON auditoria_base_migracao FOR SELECT
+      USING (get_user_perfil() IN ('admin', 'padrao'));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auditoria_base_migracao_insert' AND tablename = 'auditoria_base_migracao') THEN
+    CREATE POLICY auditoria_base_migracao_insert ON auditoria_base_migracao FOR INSERT
+      WITH CHECK (get_user_perfil() IN ('admin', 'padrao'));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auditoria_base_migracao_update' AND tablename = 'auditoria_base_migracao') THEN
+    CREATE POLICY auditoria_base_migracao_update ON auditoria_base_migracao FOR UPDATE
+      USING (get_user_perfil() = 'admin');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'auditoria_base_migracao_delete' AND tablename = 'auditoria_base_migracao') THEN
+    CREATE POLICY auditoria_base_migracao_delete ON auditoria_base_migracao FOR DELETE
+      USING (get_user_perfil() = 'admin');
+  END IF;
+END $$;
 
 -- Arquiva valores nao-mapeados antes de destruir a coluna
 INSERT INTO auditoria_base_migracao (tabela_origem, coluna_origem, valor_original, registro_id)
@@ -43,8 +67,12 @@ WHERE c.base_origem IS NOT NULL
 ALTER TABLE carregamentos DROP COLUMN IF EXISTS base_origem;
 
 -- Adiciona FK base_id
-ALTER TABLE carregamentos
-  ADD CONSTRAINT fk_carregamentos_base FOREIGN KEY (base_id) REFERENCES bases(id);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_carregamentos_base') THEN
+    ALTER TABLE carregamentos ADD CONSTRAINT fk_carregamentos_base FOREIGN KEY (base_id) REFERENCES bases(id);
+  END IF;
+END $$;
 
 -- Indice
 CREATE INDEX IF NOT EXISTS idx_carregamentos_base_id ON carregamentos(base_id);
