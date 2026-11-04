@@ -311,6 +311,45 @@ async function captureForPosto(
     }
     await screenshotEtapa("3-fechar-modal-inicial");
 
+    // Etapa 4 — captura inicial da base padrão (primeira base visível, ex: BAGAM)
+    await logEtapa(
+      postoAbrev,
+      "4-captura-inicial",
+      "Aguardando carregamento inicial do simulador...",
+    );
+    await page.waitForTimeout(TIMEOUT_3S);
+    const corpoInicial = await page.evaluate(() => document.body.innerText);
+    const precosIniciais = extractPrices(corpoInicial);
+    let baseInicial = "desconhecida";
+    for (const p of precosIniciais) {
+      if (p.base.toUpperCase().includes("BAGAM")) {
+        baseInicial = p.base;
+        break;
+      }
+    }
+    if (baseInicial === "desconhecida" && precosIniciais.length > 0) {
+      baseInicial = precosIniciais[0].base;
+    }
+    await logEtapa(
+      postoAbrev,
+      "4-captura-inicial",
+      `Base inicial identificada: ${baseInicial}. ${precosIniciais.length} preço(ões) capturado(s) inicialmente.`,
+    );
+    for (const p of precosIniciais) {
+      const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
+      if (preco > 0 && preco < VIBRA_MAX_PRECO) {
+        precos.push({
+          produto: p.produto,
+          preco,
+          base: p.base,
+          posto: postoNome,
+        });
+      }
+    }
+    // Fecha modal após leitura inicial, se houver
+    await closeModal();
+    await page.waitForTimeout(1000);
+
     async function captureBase(base: string) {
       await logEtapa(
         postoAbrev,
