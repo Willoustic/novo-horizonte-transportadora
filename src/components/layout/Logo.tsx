@@ -10,7 +10,7 @@ interface LogoProps {
 export function Logo({ className, width = 160, height = 40 }: LogoProps) {
   return (
     <Image
-      src="/images/logo.jfif"
+      src="/images/logo.jpg"
       alt="NH Transportadora"
       width={width}
       height={height}
