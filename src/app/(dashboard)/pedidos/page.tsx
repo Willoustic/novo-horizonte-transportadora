@@ -74,7 +74,12 @@ export default function PedidosPage() {
   const [bases, setBases] = useState<Base[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { postos: cadastrosPostos, combustiveis: cadastrosCombustiveis, fornecedores: cadastrosFornecedores, bases: cadastrosBases } = useCadastros(selectedDate);
+  const {
+    postos: cadastrosPostos,
+    combustiveis: cadastrosCombustiveis,
+    fornecedores: cadastrosFornecedores,
+    bases: cadastrosBases,
+  } = useCadastros(selectedDate);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({
     posto_id: "",
@@ -100,8 +105,12 @@ export default function PedidosPage() {
 
       setPedidos(Array.isArray(pedidosData) ? pedidosData : []);
       setPostos(Array.isArray(cadastrosPostos) ? cadastrosPostos : []);
-      setCombustiveis(Array.isArray(cadastrosCombustiveis) ? cadastrosCombustiveis : []);
-      setFornecedores(Array.isArray(cadastrosFornecedores) ? cadastrosFornecedores : []);
+      setCombustiveis(
+        Array.isArray(cadastrosCombustiveis) ? cadastrosCombustiveis : [],
+      );
+      setFornecedores(
+        Array.isArray(cadastrosFornecedores) ? cadastrosFornecedores : [],
+      );
       setBases(Array.isArray(cadastrosBases) ? cadastrosBases : []);
       setLoading(false);
     } catch (err) {

@@ -113,7 +113,9 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
   }
 }
 
-export function extractPrices(bodyText: string): { produto: string; preco: string }[] {
+export function extractPrices(
+  bodyText: string,
+): { produto: string; preco: string }[] {
   const results: { produto: string; preco: string }[] = [];
   const regex =
     /([A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç][A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç\s\d]+?)\s*\n\s*COD:\d+\s*\n\s*Base:\s*\n\s*(?:\w+\s*\n\s*)?Preço:\s*R\$\s*([\d.,]+)/g;
