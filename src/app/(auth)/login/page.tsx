@@ -51,10 +51,10 @@ export default function LoginPage() {
             "border-gray-200 dark:border-gray-700",
           )}
         >
-          <div className="flex justify-between items-start mb-6">
-            <div className="text-center">
-              <Logo width={160} height={40} className="mx-auto" />
-              <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+          <div className="flex justify-between items-center mb-8">
+            <div className="text-center flex-1">
+              <Logo width={180} height={45} className="mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                 NH Transportadora
               </p>
             </div>
