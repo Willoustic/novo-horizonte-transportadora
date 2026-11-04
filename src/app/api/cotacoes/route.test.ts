@@ -32,6 +32,7 @@ const mockChain = {
   eq: vi.fn(),
   gte: vi.fn(),
   lte: vi.fn(),
+  is: vi.fn(),
   select: vi.fn(),
   single: vi.fn(),
   insert: vi.fn(),
@@ -41,10 +42,11 @@ const mockChain = {
 mockChain.eq.mockReturnValue(mockChain);
 mockChain.gte.mockReturnValue(mockChain);
 mockChain.lte.mockReturnValue(mockChain);
+mockChain.is.mockReturnValue(mockChain);
 mockChain.select.mockReturnValue(mockChain);
 mockChain.update.mockReturnValue(mockChain);
 mockChain.single.mockResolvedValue({ data: [], error: null });
-mockChain.insert.mockResolvedValue({ data: [], error: null });
+mockChain.insert.mockReturnValue(mockChain);
 mockChain.order.mockResolvedValue({ data: [], error: null });
 
 const mockGetUser = vi.fn();
