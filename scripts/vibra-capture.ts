@@ -33,6 +33,14 @@ const TIMEOUT_8S = 8000;
 const TIMEOUT_3S = 3000;
 const TIMEOUT_5S = 5000;
 const TIMEOUT_1_5S = 1500;
+
+// Limite superior de preço plausível (R$/litro), configurável via env var VIBRA_MAX_PRECO.
+const VIBRA_MAX_PRECO_ENV = Number(process.env.VIBRA_MAX_PRECO ?? "10000");
+const VIBRA_MAX_PRECO =
+  Number.isFinite(VIBRA_MAX_PRECO_ENV) && VIBRA_MAX_PRECO_ENV > 0
+    ? VIBRA_MAX_PRECO_ENV
+    : 10000;
+
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -115,13 +123,13 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
 
 export function extractPrices(
   bodyText: string,
-): { produto: string; preco: string }[] {
-  const results: { produto: string; preco: string }[] = [];
+): { produto: string; preco: string; base: string }[] {
+  const results: { produto: string; preco: string; base: string }[] = [];
   const regex =
-    /([A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç][A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç\s\d]+?)\s*\n\s*COD:\d+\s*\n\s*Base:\s*\n\s*(?:\w+\s*\n\s*)?Preço:\s*R\$\s*([\d.,]+)/g;
+    /([A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç][A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç\s\d]+?)\s*\n\s*COD:\d+\s*\n\s*Base:\s*\n\s*(\w+)\s*\n\s*Preço:\s*R\$\s*([\d.,]+)/g;
   let m;
   while ((m = regex.exec(bodyText)) !== null) {
-    results.push({ produto: m[1].trim(), preco: m[2] });
+    results.push({ produto: m[1].trim(), preco: m[3], base: m[2] });
   }
   return results;
 }
@@ -130,6 +138,7 @@ async function captureForPosto(
   postoId: string,
   postoNome: string,
   postoAbrev: string,
+  bases: string[],
 ): Promise<VibraPreco[]> {
   const rawLogin = await getParam("vibra", `vibra_${postoAbrev}_login`);
   const rawSenha = await getParam("vibra", `vibra_${postoAbrev}_senha`);
@@ -313,8 +322,19 @@ async function captureForPosto(
       const prices = extractPrices(bodyText);
       for (const p of prices) {
         const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-        if (preco > 0) {
-          precos.push({ produto: p.produto, preco, base, posto: postoNome });
+        if (preco > 0 && preco < VIBRA_MAX_PRECO) {
+          precos.push({
+            produto: p.produto,
+            preco,
+            base: p.base,
+            posto: postoNome,
+          });
+        } else {
+          await logEtapa(
+            postoAbrev,
+            `4-captura-${base}`,
+            `Preço fora da faixa: ${p.produto} base ${p.base} R$ ${preco.toFixed(4)}`,
+          );
         }
       }
       await logEtapa(
@@ -324,11 +344,11 @@ async function captureForPosto(
       );
       for (const p of prices) {
         const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-        if (preco > 0) {
+        if (preco > 0 && preco < VIBRA_MAX_PRECO) {
           await logEtapa(
             postoAbrev,
             `4-captura-${base}`,
-            `  -> ${p.produto} | Base: ${base} | R$ ${preco.toFixed(4)}`,
+            `  -> ${p.produto} | Base: ${p.base} | R$ ${preco.toFixed(4)}`,
           );
         }
       }
@@ -402,8 +422,6 @@ async function captureForPosto(
         }
       }
     }
-
-    const BASES = ["BAGAM", "ARCAB", "AISUAP"];
 
     async function selecionarBase(base: string) {
       await logEtapa(
@@ -500,7 +518,7 @@ async function captureForPosto(
     // Cada base tem try/catch proprio: uma falha (ex.: seletor ausente na BAGAM)
     // registra o erro e continua para as bases restantes em vez de abortar tudo.
     try {
-      for (const base of BASES) {
+      for (const base of bases) {
         try {
           await logEtapa(
             postoAbrev,
@@ -577,32 +595,47 @@ async function main() {
       .from("combustiveis")
       .select("id, nome")
       .eq("ativo", true);
-    const combustivelMap = new Map<string, string>();
+    const combustivelByName = new Map<string, string>();
     for (const c of combustiveis || []) {
-      combustivelMap.set(c.nome.toLowerCase(), c.id);
+      combustivelByName.set(c.nome.toLowerCase(), c.id);
     }
-    // Map Vibra product names to DB combustivel names
-    combustivelMap.set(
-      "óleo diesel b s500",
-      combustivelMap.get("diesel s500")!,
-    );
-    combustivelMap.set("óleo diesel b s10", combustivelMap.get("diesel s10")!);
-    combustivelMap.set(
-      "gasolina comum c",
-      combustivelMap.get("gasolina comum")!,
-    );
-    combustivelMap.set(
-      "gasolina comum c adit petrobras grid",
-      combustivelMap.get("gasolina aditivada")!,
-    );
-    combustivelMap.set(
-      "gasolina comum c aditivada",
-      combustivelMap.get("gasolina aditivada")!,
-    );
-    combustivelMap.set(
-      "etanol hidratado combustivel",
-      combustivelMap.get("etanol")!,
-    );
+
+    // Fallback estático: nomes Vibra conhecidos -> nome do combustível no DB.
+    const VIBRA_PRODUCT_FALLBACK: Record<string, string> = {
+      "óleo diesel b s500": "diesel s500",
+      "óleo diesel b s10": "diesel s10",
+      "gasolina comum c": "gasolina comum",
+      "gasolina comum c adit petrobras grid": "gasolina aditivada",
+      "gasolina comum c aditivada": "gasolina aditivada",
+      "etanol hidratado combustivel": "etanol",
+    };
+
+    // Lê mapeamento extra da env var VIBRA_PRODUCT_MAP (JSON).
+    // Config externa sobrescreve/estende o fallback. Ausente ou inválida -> apenas fallback.
+    function loadProductMap(): Record<string, string> {
+      const map = { ...VIBRA_PRODUCT_FALLBACK };
+      const raw = process.env.VIBRA_PRODUCT_MAP;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            Object.assign(map, parsed); // env var vence sobre o fallback
+          }
+        } catch {
+          // JSON malformado: ignora e mantém apenas o fallback estático
+        }
+      }
+      return map;
+    }
+
+    // Combustível ID por nome Vibra (lowercase)
+    const combustivelMap = new Map<string, string>();
+    for (const [vibraNome, dbNome] of Object.entries(loadProductMap())) {
+      const id = combustivelByName.get(dbNome.toLowerCase());
+      if (id) {
+        combustivelMap.set(vibraNome.toLowerCase(), id);
+      }
+    }
 
     // Build base abreviacao -> id map for base_id FK lookup
     const { data: basesData } = await supabase
@@ -613,6 +646,22 @@ async function main() {
       baseIdMap[b.abreviacao] = b.id;
     });
 
+    // Lista de bases ativas usadas para iterar na captura
+    const { data: basesAtivas } = await supabase
+      .from("bases")
+      .select("id, abreviacao")
+      .eq("ativo", true);
+    const bases = (basesAtivas || []).map((b) => b.abreviacao);
+
+    if (bases.length === 0) {
+      await logEtapa(
+        "SISTEMA",
+        "captura-geral",
+        "Nenhuma base ativa cadastrada na tabela 'bases'. Encerrando captura.",
+      );
+      process.exit(1);
+    }
+
     // Allow filtering by a single posto via --posto=ABREV.
     // "ALL" or empty means all active FILIAL postos.
     const postoArg = process.argv.find((a) => a.startsWith("--posto="));
@@ -622,23 +671,61 @@ async function main() {
       ? postos || []
       : (postos || []).filter((p) => p.abreviacao === postoFilter);
 
+    const dataArg = process.argv.find((a) => a.startsWith("--data="));
+    const dataCaptura = dataArg ? dataArg.split("=")[1] : new Date().toISOString().slice(0, 10);
+
+    // Deleta precos fonte='vibra' da data selecionada antes de gravar
+    const start = `${dataCaptura}T00:00:00.000Z`;
+    const end = `${dataCaptura}T23:59:59.999Z`;
+    const { error: delError } = await supabase
+      .from("cotacoes")
+      .delete()
+      .eq("fonte", "vibra")
+      .gte("data_registro", start)
+      .lte("data_registro", end);
+    if (delError)
+      await logEtapa(
+        "SISTEMA",
+        "delete",
+        `Erro ao deletar preços vibra da data ${dataCaptura}: ${delError.message}`,
+      );
+
     for (const posto of filteredPostos) {
       const precos = await captureForPosto(
         posto.id,
         posto.nome,
         posto.abreviacao,
+        bases,
       );
       for (const p of precos) {
         // preço formatado abaixo no logEtapa ou removido
       }
 
       for (const p of precos) {
+        if (!(p.preco > 0 && p.preco < VIBRA_MAX_PRECO)) {
+          await logEtapa(
+            posto.abreviacao,
+            "preco-fora-faixa",
+            `Preço fora da faixa: ${p.produto} base ${p.base} R$ ${p.preco.toFixed(4)}`,
+          );
+          continue;
+        }
         const combustivelId = combustivelMap.get(p.produto.toLowerCase());
         if (!combustivelId) {
+          await logEtapa(
+            posto.abreviacao,
+            "nao-mapeado",
+            `Produto não mapeado: ${p.produto} (posto ${posto.abreviacao}, base ${p.base})`,
+          );
           continue;
         }
         const baseId = baseIdMap[p.base];
         if (!baseId) {
+          await logEtapa(
+            posto.abreviacao,
+            "nao-mapeado",
+            `Base não mapeada: ${p.base} (posto ${posto.abreviacao})`,
+          );
           continue;
         }
         const { data: existing } = await supabase
@@ -650,7 +737,7 @@ async function main() {
           .eq("base_id", baseId)
           .single();
 
-        const now = new Date().toISOString();
+        const now = `${dataCaptura}T00:00:00.000Z`;
         if (existing) {
           const { error: histError } = await supabase
             .from("historico_precos")
