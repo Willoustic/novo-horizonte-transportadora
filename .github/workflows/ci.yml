@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [master, fix/vibra-preco-por-base]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Executar testes (vitest)
+        run: npm test
