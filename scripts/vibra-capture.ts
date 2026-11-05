@@ -8,8 +8,8 @@ import crypto from "crypto";
 
 chromium.use(stealth());
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY!;
 export function decrypt(encryptedText: string): string {
+  const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY!;
   const key = Buffer.from(ENCRYPTION_KEY, "hex");
   const parts = encryptedText.split(":");
   if (parts.length !== 3) return encryptedText;
