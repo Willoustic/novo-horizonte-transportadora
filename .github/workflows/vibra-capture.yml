@@ -1,43 +1,50 @@
-name: vibra-capture
+name: Vibra Capture
 
 on:
+  schedule:
+    # Executa diariamente às 08:00, 12:00, 14:00 e 15:00 (teste) — horários em UTC.
+    # Para horário de Brasília (UTC-3), subtraia 3h: 05:00, 09:00, 11:00 e 12:00 BRT.
+    - cron: "0 8 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 14 * * *"
+    - cron: "0 15 * * *" # teste — remover após validar
   workflow_dispatch:
     inputs:
       posto:
-        description: "Abreviacao do posto (ex: VIT, ZN). Deixe vazio para capturar todos."
+        description: "Abreviação do posto (ex: VITORIA, PNH2-ZN, PNH1-ZS) ou ALL"
         required: false
-        default: ""
-
+        default: "ALL"
       data:
-        description: "Data das cotacoes no formato YYYY-MM-DD para deletar precos vibra existentes antes da captura."
+        description: "Data para capturar (YYYY-MM-DD), opcional"
         required: false
         default: ""
 
 jobs:
   capturar:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout repo
+      - name: Checkout do repositório
         uses: actions/checkout@v4
-        with:
-          ref: master
 
-      - name: Setup Node.js
+      - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
+          cache: "npm"
 
-      - name: Install dependencies
-        run: npm install
+      - name: Instalar dependências do Chromium (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
 
-      - name: Install Playwright Chromium (with system deps)
-        run: npx playwright install --with-deps chromium
+      - name: Instalar dependências do projeto
+        run: npm ci
 
-      - name: Run vibra capture
-        run: npx tsx scripts/vibra-capture.ts ${{ inputs.posto && format('--posto={0}', inputs.posto) }}${{ inputs.data && format(' --data={0}', inputs.data) }}
+      - name: Executar captura de preços Vibra
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           VIBRA_EMAIL_USER: ${{ secrets.VIBRA_EMAIL_USER }}
           VIBRA_EMAIL_PASS: ${{ secrets.VIBRA_EMAIL_PASS }}
+        run: npm run vibra:capture ${{ github.event.inputs.posto && format('--posto={0}', github.event.inputs.posto) || '' }}
