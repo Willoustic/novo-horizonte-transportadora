@@ -1,7 +1,7 @@
 ﻿# Memory — Novo Horizonte Transportadora de Combustíveis
 
 > Arquivo de memória do projeto. Referencia toda a documentação em /docs.
-> Última atualização: 2026-10-28
+> Última atualização: 2026-11-05
 
 ## Visão Geral
 
@@ -97,7 +97,14 @@ Vibra, Setta, Larco, Petrovia
 - supabase/migrations/009 e 011: tabela auditoria_base_migracao arquiva valores de base/base_origem fora da seed antes do DROP COLUMN (sem perda irreversível).
 - scripts/vibra-capture.ts: try/catch por iteração de base (falha numa base não aborta as demais); simularPreços usa baseline de texto antes do click (não captura preço de base cached/errada); diagnóstico (url/title/text) + screenshot nos erros.
 
+### Correções aplicadas (2026-11-05)
+
+- scripts/vibra-capture.ts: reescrito com fluxo de troca de base por dropdown (arrow_drop_down → + → input base → Enter primeiro item) em vez de mat-option:has-text (não encontrava opção). Captura primeira base (BAGAM padrão) sem trocar; bases restantes usam dropdown. Aguarda modal Simulador de Preços (mat-dialog-title), fecha X após captura, clica Simular preços (arrow_forward) e aguarda renderização real do corpo antes de extrair. VIBRA_MAX_PRECO e VIBRA_PRODUCT_MAP configuráveis via env.
+- Testes vitest (decrypt + extractPrices): 12/12 passando.
+- Commit f421eec pushado ao GitHub master.
+
 ### Próximo passo
 
+- Deploy de produção na Vercel após push.
 - Testes E2E e refinamentos de UI.
 - PNH2-ZN Vibra capture: portal não renderiza tabela de preços nem seletor de base (problema de conta/portal Vibra, não de código).

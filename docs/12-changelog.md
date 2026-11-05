@@ -1,5 +1,23 @@
 # 12 - Changelog
 
+## [0.1.3] - 2026-11-05
+
+### Adicionado
+
+- Fluxo de troca de base por dropdown no `scripts/vibra-capture.ts`: `arrow_drop_down` → `+` → `input base` → `Enter` (primeiro item), substituindo `mat-option:has-text` (não encontrava opção).
+- Captura primeira base (BAGAM padrão) sem trocar; bases restantes (ARCAB, AISUAP) usam o fluxo de dropdown.
+- Aguarda modal "Simulador de Preços" (mat-dialog-title), fecha X após captura, clica "Simular preços" (arrow_forward) e aguarda renderização real do corpo antes de extrair preços.
+- Env vars `VIBRA_MAX_PRECO` e `VIBRA_PRODUCT_MAP` configuráveis para filtro de preço e mapeamento de produtos.
+- Testes vitest de `decrypt` e `extractPrices`: 12/12 passando.
+
+### Corrigido
+
+- `scripts/vibra-capture.ts`: troca de base não encontrava opção via `mat-option:has-text`; reescrito para seletor de input + Enter. try/catch por iteração de base (falha numa base não aborta as demais); diagnóstico (url/title/text) + screenshot nos erros.
+
+### Implantação
+
+- Commit `f421eec` no GitHub master.
+
 ## [0.1.2] - 2026-10-28
 
 ### Adicionado

@@ -41,7 +41,7 @@ src/
     ui/                 # shadcn/ui
   lib/                  # supabase, crypto
   types/                # tipos TypeScript
-supabase/migrations/    # migrations SQL numeradas (001_ a 007_)
+supabase/migrations/    # migrations SQL numeradas (001_ a 011_)
 scripts/                # automações (vibra-capture)
 docs/                   # documentação técnica
 ```
@@ -65,6 +65,10 @@ GC, GA, DS10, DS500/DC, ET
 ## Fornecedores
 
 Vibra, Setta, Larco, Petrovia
+
+## Captura de preços Vibra
+
+O script `scripts/vibra-capture.ts` captura preços no portal Vibra por base (BAGAM padrão, ARCAB, AISUAP) via Playwright + login SSO + 2FA por IMAP Gmail. Usa `--posto=ALL` (todos os postos FILIAIS) ou `--posto=ABREV` para filtrar. Insere/atualiza `cotacoes` (fonte='vibra') e `historico_precos` (audit).
 
 ## Variáveis de Ambiente
 
@@ -98,6 +102,10 @@ supabase/migrations/004_add_base_to_cotacoes.sql
 supabase/migrations/005_add_pedido_status_values.sql
 supabase/migrations/006_add_data_columns.sql
 supabase/migrations/007_remove_vibra.sql
+supabase/migrations/008_add_base_to_cotacoes_unique.sql
+supabase/migrations/009_bases_table.sql
+supabase/migrations/010_itens_pedido_fks.sql
+supabase/migrations/011_carregamentos_base_fk.sql
 ```
 
 ## Deploy (Vercel)
