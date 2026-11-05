@@ -97,14 +97,17 @@ Vibra, Setta, Larco, Petrovia
 - supabase/migrations/009 e 011: tabela auditoria_base_migracao arquiva valores de base/base_origem fora da seed antes do DROP COLUMN (sem perda irreversível).
 - scripts/vibra-capture.ts: try/catch por iteração de base (falha numa base não aborta as demais); simularPreços usa baseline de texto antes do click (não captura preço de base cached/errada); diagnóstico (url/title/text) + screenshot nos erros.
 
-### Correções aplicadas (2026-11-05)
+### Correções aplicadas (2026-11-05) — PR #4 (mergeado em master)
 
-- scripts/vibra-capture.ts: reescrito com fluxo de troca de base por dropdown (arrow_drop_down → + → input base → Enter primeiro item) em vez de mat-option:has-text (não encontrava opção). Captura primeira base (BAGAM padrão) sem trocar; bases restantes usam dropdown. Aguarda modal Simulador de Preços (mat-dialog-title), fecha X após captura, clica Simular preços (arrow_forward) e aguarda renderização real do corpo antes de extrair. VIBRA_MAX_PRECO e VIBRA_PRODUCT_MAP configuráveis via env.
-- Testes vitest (decrypt + extractPrices): 12/12 passando.
-- Commit f421eec pushado ao GitHub master.
+- `scripts/vibra-capture.ts`: reescrito com extração DOM-based por base (`mat-dialog-container:visible > table.simulador-table`) substituindo regex de texto do corpo. `extractPrices(page, base)` assíncrono, recebe `base` como argumento; `VibraPreco.posto` opcional. `ENCRYPTION_KEY` lido dentro de `decrypt` (leitura em nível de módulo causava falha nos testes pelo tempo de injeção do `vitest.setup.ts`). Guard/warning quando uma base retorna zero preços. Try/catch por iteração de base (falha numa base não aborta as demais); diagnóstico + screenshot nos erros.
+- Testes vitest: 15 testes passando (2 arquivos). `tsc --noEmit`: sem erros. Prettier aplicado.
+- Novo endpoint `POST /api/capturar-vibra`: executa `npx tsx scripts/vibra-capture.ts` como processo filho; autenticado (perfis admin/padrao); filtro opcional `posto` no corpo; credenciais AES-256-GCM do Supabase, nunca expostas em logs/responses.
+- `vercel.json`: `maxDuration: 300` para a rota de captura. `.env.example` com variáveis de ambiente (sem segredos reais). Workflow CI `.github/workflows/ci.yml` adicionado.
+- Branch `fix/vibra-preco-por-base` (commit 7ce4ba1) pushada ao origin; PR #4 mergeado em master (commit a5a66a6).
 
 ### Próximo passo
 
-- Deploy de produção na Vercel após push.
-- Testes E2E e refinamentos de UI.
-- PNH2-ZN Vibra capture: portal não renderiza tabela de preços nem seletor de base (problema de conta/portal Vibra, não de código).
+- Configurar Vercel environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`.
+- Testar `/api/capturar-vibra` a partir do portal (botão "Capturar Vibra" já conectado ao novo endpoint).
+- Limitação conhecida: Vercel serverless + Playwright/Chromium pode não rodar em produção; validar captura em ambiente com Chromium instalado.
+- PNH2-ZN Vibra capture: portal não renderiza tabela de preços (problema de conta/portal Vibra, não de código).

@@ -1,5 +1,23 @@
 # 12 - Changelog
 
+## [0.1.4] - 2026-11-05
+
+### Adicionado
+
+- Endpoint `POST /api/capturar-vibra`: executa `scripts/vibra-capture.ts` como processo filho, autenticado (perfis admin/padrao), filtro opcional `posto` no corpo. Insere/atualiza `cotacoes` (fonte='vibra') e `historico_precos` (audit).
+- `vercel.json`: `maxDuration: 300` para a rota de captura (Playwright/Chromium é demorado).
+- `.env.example` com variáveis de ambiente (sem segredos reais).
+- Workflow CI `.github/workflows/ci.yml` para validacao de build/testes em cada push.
+
+### Corrigido
+
+- `scripts/vibra-capture.ts`: extração de preços reescrita para DOM-based (`mat-dialog-container:visible > table.simulador-table`) substituindo regex de texto do corpo. `extractPrices(page, base)` assíncrono; `VibraPreco.posto` opcional; `ENCRYPTION_KEY` lido dentro de `decrypt`; guard/warning quando base retorna zero preços.
+- Testes vitest: 15 passando (decrypt + extractPrices). `tsc --noEmit`: sem erros.
+
+### Implantação
+
+- PR #4 mergeado em master (commit a5a66a6). Branch `fix/vibra-preco-por-base` (commit 7ce4ba1).
+
 ## [0.1.3] - 2026-11-05
 
 ### Adicionado

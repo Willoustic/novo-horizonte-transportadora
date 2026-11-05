@@ -68,7 +68,13 @@ Vibra, Setta, Larco, Petrovia
 
 ## Captura de preços Vibra
 
-O script `scripts/vibra-capture.ts` captura preços no portal Vibra por base (BAGAM padrão, ARCAB, AISUAP) via Playwright + login SSO + 2FA por IMAP Gmail. Usa `--posto=ALL` (todos os postos FILIAIS) ou `--posto=ABREV` para filtrar. Insere/atualiza `cotacoes` (fonte='vibra') e `historico_precos` (audit).
+O script `scripts/vibra-capture.ts` captura preços no portal Vibra por base (BAGAM padrão, ARCAB, AISUAP) via Playwright + login SSO + 2FA por IMAP Gmail. Usa `--posto=ALL` (todos os postos FILIAIS) ou `--posto=ABREV` para filtrar. Insere/atualiza `cotacoes` (fonte='vibra') e `historico_precos` (audit). Roda localmente com `npm run vibra:capture`.
+
+### Via API (portal)
+
+O botão "Capturar Vibra" na tela de Cotações dispara a captura. O endpoint `POST /api/capturar-vibra` executa o script diretamente no servidor (processo filho), requer autenticação (perfis `admin` ou `padrao`) e aceita corpo opcional `{ "posto": "VITORIA" }` para filtrar por posto. O endpoint legado `POST /api/vibra/capturar` dispara o workflow do GitHub Actions (`workflow_dispatch`).
+
+> Atenção: o endpoint de captura depende do Playwright/Chromium. Em Vercel serverless (Free) pode não funcionar sem Chromium disponível; validar em ambiente com Chromium instalado.
 
 ## Variáveis de Ambiente
 
@@ -77,8 +83,8 @@ Copie `.env.example` para `.env.local` e preencha:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-ENCRYPTION_KEY=   # 32 bytes em hex (64 caracteres)
+SUPABASE_SERVICE_ROLE_KEY=  # Segredo. Server-side only (scripts e rota /api/capturar-vibra)
+ENCRYPTION_KEY=             # 32 bytes em hex (64 caracteres). Obrigatório para descriptografar credenciais da Vibra.
 ```
 
 ## Desenvolvimento Local
