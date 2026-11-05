@@ -55,6 +55,9 @@ async function logEtapa(
   console.error(`[${postoAbrev}][${etapa}] ${agora} - ${mensagem}`);
 }
 
+const SIMULADOR_URL =
+  "https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true";
+
 const EMAIL_HOST = "imap.gmail.com";
 const EMAIL_USER = process.env.VIBRA_EMAIL_USER!;
 const EMAIL_PASS = process.env.VIBRA_EMAIL_PASS!;
@@ -190,6 +193,227 @@ async function captureForPosto(
     }
   }
 
+  async function waitForEl(selector: string, timeoutMs = 5000) {
+    try {
+      await page.waitForSelector(selector, { timeout: timeoutMs });
+      return await page.$(selector);
+    } catch (e) {
+      await logEtapa(
+        postoAbrev,
+        "waitForEl",
+        `Seletor não encontrado: ${selector} (${(e as Error).message})`,
+      );
+      return null;
+    }
+  }
+
+  async function closeModal() {
+    const closeBtn = await page.$('i.md-icons:has-text("close")');
+    if (closeBtn) {
+      await closeBtn.click({ force: true });
+      await page.waitForTimeout(2000);
+      await logEtapa(postoAbrev, "modal", "modal fechado");
+    }
+  }
+
+  // Aguarda o modal "Simulador de Preços" (mat-dialog-title-0 / qualquer id gerado).
+  // Se não estiver aberto, reabre acessando a URL do simulador.
+  async function aguardarModalSimulador() {
+    let titulo = await waitForEl(
+      'mat-dialog-title:has-text("Simulador de Preços")',
+      12000,
+    );
+    if (!titulo) {
+      await logEtapa(
+        postoAbrev,
+        "modal-reabrir",
+        "Modal não encontrado. Reabrindo simulador...",
+      );
+      await page.goto(SIMULADOR_URL, {
+        waitUntil: "domcontentloaded",
+        timeout: TIMEOUT_30S,
+      });
+      await page.waitForTimeout(TIMEOUT_3S);
+      titulo = await waitForEl(
+        'mat-dialog-title:has-text("Simulador de Preços")',
+        15000,
+      );
+      if (!titulo) {
+        throw new Error(
+          "Modal 'Simulador de Preços' não encontrado após reabertura",
+        );
+      }
+    }
+    await logEtapa(
+      postoAbrev,
+      "modal",
+      "Modal 'Simulador de Preços' detectado.",
+    );
+  }
+
+  // Troca de base via dropdown: abre (arrow_drop_down), clica '+', preenche input,
+  // seleciona o primeiro item com Enter.
+  async function trocarBase(base: string) {
+    await logEtapa(
+      postoAbrev,
+      `trocar-base-${base}`,
+      `Trocando para base ${base}...`,
+    );
+
+    const drop = await page.$('i.md-icons:has-text("arrow_drop_down")');
+    if (drop) {
+      await drop.click({ force: true });
+      await page.waitForTimeout(TIMEOUT_1_5S);
+    }
+
+    const addBtn = await page.$("i.md-icons.adicionar-bases-icon");
+    if (addBtn) {
+      await addBtn.click({ force: true });
+      await page.waitForTimeout(TIMEOUT_1_5S);
+    }
+
+    const input =
+      (await page.$('input.mat-input-2[formcontrolname="base"]')) ||
+      (await page.$("input.mat-autocomplete-trigger"));
+    if (!input) {
+      throw new Error(`input de base não encontrado para ${base}`);
+    }
+    await input.fill("");
+    await input.type(base, { delay: 100 });
+    await page.waitForTimeout(TIMEOUT_1_5S);
+
+    // Seleciona o primeiro item do autocomplete pressionando Enter.
+    await input.press("Enter");
+    await page.waitForTimeout(TIMEOUT_1_5S);
+
+    // Verifica se a base foi realmente selecionada antes de simular.
+    const selecionado = await page.$("div.mat-form-field-flex");
+    const texto = selecionado ? await selecionado.innerText() : "";
+    if (!texto.includes(base)) {
+      throw new Error(
+        `Base "${base}" não selecionada (campo mostra: ${texto.slice(
+          0,
+          200,
+        )})`,
+      );
+    }
+    await logEtapa(
+      postoAbrev,
+      `trocar-base-${base}`,
+      `Base "${base}" selecionada.`,
+    );
+  }
+
+  async function clicarSimularPrecos(base: string) {
+    await logEtapa(
+      postoAbrev,
+      `simular-${base}`,
+      `Clicando em 'Simular preços' para ${base}...`,
+    );
+    const btn =
+      (await page.$('button:has-text("Simular preços")')) ||
+      (await page.$('i.md-icons:has-text("arrow_forward")'));
+    if (!btn) {
+      throw new Error(`botão "Simular preços" não encontrado para ${base}`);
+    }
+    await btn.click({ force: true });
+    await page.waitForTimeout(TIMEOUT_3S);
+    // Baseline do texto ANTES da renderização; só prossegue quando o corpo mudar de verdade
+    // (evita retornar preços de base anterior/cached quando o corpo já contém 'R$').
+    const textoAntes = await page.evaluate(() => document.body.innerText);
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      const corpo = await page.evaluate(() => document.body.innerText);
+      if (corpo !== textoAntes && /R\$\s*[\d.,]+/.test(corpo)) {
+        await logEtapa(
+          postoAbrev,
+          `simular-${base}`,
+          "Preços renderizados para a base.",
+        );
+        return;
+      }
+      await page.waitForTimeout(TIMEOUT_1_5S);
+    }
+    await logEtapa(
+      postoAbrev,
+      `simular-${base}`,
+      "AVISO: tempo esgotado aguardando preços (prosseguindo com captura).",
+    );
+  }
+
+  async function capturarBase(bodyText: string, base: string) {
+    const prices = extractPrices(bodyText);
+    let count = 0;
+    for (const p of prices) {
+      const preco = parseFloat(
+        p.preco.replace(/\./g, "").replace(",", "."),
+      );
+      if (preco > 0 && preco < VIBRA_MAX_PRECO) {
+        precos.push({
+          produto: p.produto,
+          preco,
+          base: p.base,
+          posto: postoNome,
+        });
+        count++;
+      } else {
+        await logEtapa(
+          postoAbrev,
+          `captura-${base}`,
+          `Preço fora da faixa: ${p.produto} base ${p.base} R$ ${preco.toFixed(4)}`,
+        );
+      }
+    }
+    await logEtapa(
+      postoAbrev,
+      `captura-${base}`,
+      `${count} preço(ões) capturado(s) para a base ${base}.`,
+    );
+    for (const p of prices) {
+      const preco = parseFloat(
+        p.preco.replace(/\./g, "").replace(",", "."),
+      );
+      if (preco > 0 && preco < VIBRA_MAX_PRECO) {
+        await logEtapa(
+          postoAbrev,
+          `captura-${base}`,
+          `  -> ${p.produto} | Base: ${p.base} | R$ ${preco.toFixed(4)}`,
+        );
+      }
+    }
+  }
+
+  async function diagnosticarErro(etapa: string, motivo: string) {
+    try {
+      const estado = await page.evaluate(() => ({
+        url: window.location.href,
+        title: document.title,
+        textLen: document.body.textContent?.length ?? 0,
+        text: document.body.textContent?.slice(0, 500) ?? "",
+      }));
+      await logEtapa(
+        postoAbrev,
+        etapa,
+        `DIAGNOSTICO ${motivo}: url=${estado.url} title=${estado.title} textLen=${estado.textLen}`,
+      );
+    } catch (e) {
+      await logEtapa(
+        postoAbrev,
+        etapa,
+        `Falha ao capturar diagnostico: ${(e as Error).message}`,
+      );
+    }
+    try {
+      await screenshotEtapa(`${etapa}-${motivo}`);
+    } catch (e) {
+      await logEtapa(
+        postoAbrev,
+        etapa,
+        `Falha ao capturar screenshot: ${(e as Error).message}`,
+      );
+    }
+  }
+
   try {
     // Etapa 1 — navegação para o portal
     await logEtapa(
@@ -197,10 +421,10 @@ async function captureForPosto(
       "1-navegacao",
       "Acessando portal Vibra central-de-pedidos",
     );
-    await page.goto(
-      "https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true",
-      { waitUntil: "domcontentloaded", timeout: TIMEOUT_30S },
-    );
+    await page.goto(SIMULADOR_URL, {
+      waitUntil: "domcontentloaded",
+      timeout: TIMEOUT_30S,
+    });
     await page.waitForTimeout(TIMEOUT_3S);
     await logEtapa(postoAbrev, "1-navegacao", `URL atual: ${page.url()}`);
     await screenshotEtapa("1-navegacao");
@@ -287,332 +511,71 @@ async function captureForPosto(
       );
     }
 
-    // Etapa 3 — fechar modal inicial (se houver)
-    await logEtapa(
-      postoAbrev,
-      "3-fechar-modal-inicial",
-      "Verificando modal inicial para fechar...",
-    );
-    const closeBtnInicial = await page.$('i.md-icons:has-text("close")');
-    if (closeBtnInicial) {
-      await closeBtnInicial.click({ force: true });
-      await page.waitForTimeout(2000);
+    // Etapa 3 — aguardar modal do simulador
+    await aguardarModalSimulador();
+    await screenshotEtapa("3-modal-simulador");
+
+    // Primeira base (padrão, já exibida no modal): capturar sem trocar de base.
+    const primeiraBase = bases[0];
+    if (primeiraBase) {
       await logEtapa(
         postoAbrev,
-        "3-fechar-modal-inicial",
-        "Modal inicial fechado.",
+        `captura-${primeiraBase}`,
+        `Capturando base padrão ${primeiraBase}...`,
       );
-    } else {
-      await logEtapa(
-        postoAbrev,
-        "3-fechar-modal-inicial",
-        "Nenhum modal inicial detectado.",
-      );
-    }
-    await screenshotEtapa("3-fechar-modal-inicial");
-
-    // Etapa 4 — captura inicial da base padrão (primeira base visível, ex: BAGAM)
-    await logEtapa(
-      postoAbrev,
-      "4-captura-inicial",
-      "Aguardando carregamento inicial do simulador...",
-    );
-    await page.waitForTimeout(TIMEOUT_3S);
-    const corpoInicial = await page.evaluate(() => document.body.innerText);
-    const precosIniciais = extractPrices(corpoInicial);
-    let baseInicial = "desconhecida";
-    for (const p of precosIniciais) {
-      if (p.base.toUpperCase().includes("BAGAM")) {
-        baseInicial = p.base;
-        break;
-      }
-    }
-    if (baseInicial === "desconhecida" && precosIniciais.length > 0) {
-      baseInicial = precosIniciais[0].base;
-    }
-    await logEtapa(
-      postoAbrev,
-      "4-captura-inicial",
-      `Base inicial identificada: ${baseInicial}. ${precosIniciais.length} preço(ões) capturado(s) inicialmente.`,
-    );
-    for (const p of precosIniciais) {
-      const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-      if (preco > 0 && preco < VIBRA_MAX_PRECO) {
-        precos.push({
-          produto: p.produto,
-          preco,
-          base: p.base,
-          posto: postoNome,
-        });
-      }
-    }
-    // Fecha modal após leitura inicial, se houver
-    await closeModal();
-    await page.waitForTimeout(1000);
-
-    async function captureBase(base: string) {
-      await logEtapa(
-        postoAbrev,
-        `4-captura-${base}`,
-        `Iniciando captura de preços para a base ${base}...`,
-      );
-      await screenshotEtapa(`4-captura-${base}-antes`);
-      const bodyText = await page.evaluate(() => document.body.innerText);
-      const prices = extractPrices(bodyText);
-      for (const p of prices) {
-        const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-        if (preco > 0 && preco < VIBRA_MAX_PRECO) {
-          precos.push({
-            produto: p.produto,
-            preco,
-            base: p.base,
-            posto: postoNome,
-          });
-        } else {
-          await logEtapa(
-            postoAbrev,
-            `4-captura-${base}`,
-            `Preço fora da faixa: ${p.produto} base ${p.base} R$ ${preco.toFixed(4)}`,
-          );
-        }
-      }
-      await logEtapa(
-        postoAbrev,
-        `4-captura-${base}`,
-        `${prices.length} preço(ões) extraído(s) para a base ${base}.`,
-      );
-      for (const p of prices) {
-        const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-        if (preco > 0 && preco < VIBRA_MAX_PRECO) {
-          await logEtapa(
-            postoAbrev,
-            `4-captura-${base}`,
-            `  -> ${p.produto} | Base: ${p.base} | R$ ${preco.toFixed(4)}`,
-          );
-        }
-      }
-      await screenshotEtapa(`4-captura-${base}-depois`);
-      await logEtapa(
-        postoAbrev,
-        `4-captura-${base}`,
-        `${prices.length} preço(ões) para a base ${base}`,
-      );
-    }
-
-    async function waitForEl(selector: string, timeoutMs = 5000) {
-      try {
-        await page.waitForSelector(selector, { timeout: timeoutMs });
-        return await page.$(selector);
-      } catch (e) {
-        await logEtapa(
-          postoAbrev,
-          "waitForEl",
-          `Seletor não encontrado: ${selector} (${(e as Error).message})`,
-        );
-        return null;
-      }
-    }
-
-    async function closeModal() {
-      const closeBtn = await page.$('i.md-icons:has-text("close")');
-      if (closeBtn) {
-        await closeBtn.click({ force: true });
-        await page.waitForTimeout(2000);
-        await logEtapa(postoAbrev, "modal", "modal fechado");
-      }
-    }
-
-    async function diagnosticarErro(etapa: string, motivo: string) {
-      try {
-        const estado = await page.evaluate(() => ({
-          url: window.location.href,
-          title: document.title,
-          textLen: document.body.textContent?.length ?? 0,
-          text: document.body.textContent?.slice(0, 500) ?? "",
-        }));
-        await logEtapa(
-          postoAbrev,
-          etapa,
-          `DIAGNOSTICO ${motivo}: url=${estado.url} title=${estado.title} textLen=${estado.textLen}`,
-        );
-      } catch (e) {
-        await logEtapa(
-          postoAbrev,
-          etapa,
-          `Falha ao capturar diagnostico: ${(e as Error).message}`,
-        );
-      }
-      try {
-        await screenshotEtapa(`${etapa}-${motivo}`);
-      } catch (e) {
-        await logEtapa(
-          postoAbrev,
-          etapa,
-          `Falha ao capturar diagnostico: ${(e as Error).message}`,
-        );
-        try {
-          await screenshotEtapa(`${etapa}-${motivo}`);
-        } catch (screenshotErr) {
-          await logEtapa(
-            postoAbrev,
-            etapa,
-            `Falha ao capturar screenshot: ${(screenshotErr as Error).message}`,
-          );
-        }
-      }
-    }
-
-    async function selecionarBase(base: string) {
-      await logEtapa(
-        postoAbrev,
-        `selecionar-base-${base}`,
-        `Abrindo seletor de base para ${base}...`,
-      );
-      const formField = await waitForEl("div.mat-form-field-flex", 8000);
-      if (!formField) {
-        throw new Error(
-          `form-field de seleção de base não encontrado para ${base}`,
-        );
-      }
-      await formField.click({ force: true });
-      await page.waitForTimeout(TIMEOUT_1_5S);
-
-      const addBtn = await page.$("i.md-icons.adicionar-bases-icon");
-      if (addBtn) {
-        await addBtn.click({ force: true });
-        await page.waitForTimeout(TIMEOUT_1_5S);
-      }
-
-      const input = await page.$("input.mat-autocomplete-trigger");
-      if (!input) {
-        throw new Error(
-          `input.mat-autocomplete-trigger não encontrado para ${base}`,
-        );
-      }
-      await input.fill("");
-      await input.type(base, { delay: 100 });
-      await page.waitForTimeout(TIMEOUT_1_5S);
-
-      const option = await page.$(`mat-option:has-text("${base}")`);
-      if (!option) {
-        throw new Error(`mat-option "${base}" não encontrada no dropdown`);
-      }
-      await option.click({ force: true });
-      await page.waitForTimeout(TIMEOUT_1_5S);
-
-      // Verifica se a base foi realmente selecionada antes de simular
-      const selecionado = await page.$("div.mat-form-field-flex");
-      const texto = selecionado ? await selecionado.innerText() : "";
-      if (!texto.includes(base)) {
-        throw new Error(
-          `Base "${base}" não foi selecionada (campo mostra: ${texto.slice(
-            0,
-            200,
-          )})`,
-        );
-      }
-      await logEtapa(
-        postoAbrev,
-        `selecionar-base-${base}`,
-        `Base "${base}" selecionada.`,
-      );
-    }
-
-    async function simularPreços(base: string) {
-      await logEtapa(
-        postoAbrev,
-        `simular-${base}`,
-        `Clicando em 'Simular preços' para ${base}...`,
-      );
-      const btn = await page.$('button:has-text("Simular preços")');
-      if (!btn) {
-        throw new Error(`botão "Simular preços" não encontrado para ${base}`);
-      }
-      await btn.click({ force: true });
       await page.waitForTimeout(TIMEOUT_3S);
-      // Baseline do texto ANTES da renderização; só prossegue quando o corpo mudar de verdade
-      // (evita retornar precos de base anterior/cached quando o corpo ja contem 'R$').
-      const textoAntes = await page.evaluate(() => document.body.innerText);
-      const deadline = Date.now() + 30000;
-      while (Date.now() < deadline) {
+      const corpoInicial = await page.evaluate(() => document.body.innerText);
+      await capturarBase(corpoInicial, primeiraBase);
+      await closeModal();
+      await page.waitForTimeout(1000);
+    }
+
+    // Bases restantes: trocar via dropdown (+, input, Enter), simular, capturar, fechar modal.
+    for (let i = 1; i < bases.length; i++) {
+      const base = bases[i];
+      try {
+        await logEtapa(
+          postoAbrev,
+          `captura-${base}`,
+          `Iniciando captura isolada da base ${base}...`,
+        );
+        await aguardarModalSimulador();
+        await trocarBase(base);
+        await clicarSimularPrecos(base);
+        await page.waitForTimeout(TIMEOUT_3S);
         const corpo = await page.evaluate(() => document.body.innerText);
-        if (corpo !== textoAntes && /R\$\s*[\d.,]+/.test(corpo)) {
-          await logEtapa(
-            postoAbrev,
-            `simular-${base}`,
-            "Preços renderizados para a base.",
-          );
-          return;
-        }
-        await page.waitForTimeout(TIMEOUT_1_5S);
-      }
-      await logEtapa(
-        postoAbrev,
-        `simular-${base}`,
-        "AVISO: tempo esgotado aguardando preços (prosseguindo com captura).",
-      );
-    }
-
-    // Captura uma base por vez, em estado limpo, sem contaminação entre bases.
-    // Cada base tem try/catch proprio: uma falha (ex.: seletor ausente na BAGAM)
-    // registra o erro e continua para as bases restantes em vez de abortar tudo.
-    try {
-      for (const base of bases) {
+        await capturarBase(corpo, base);
+        await closeModal();
+        await page.waitForTimeout(1000);
+        await logEtapa(
+          postoAbrev,
+          `captura-${base}`,
+          `Captura isolada da base ${base} concluída.`,
+        );
+      } catch (err) {
+        await logEtapa(
+          postoAbrev,
+          `captura-${base}`,
+          `ERRO: ${(err as Error).message}`,
+        );
+        await diagnosticarErro(`captura-${base}`, base);
         try {
-          await logEtapa(
-            postoAbrev,
-            `captura-${base}`,
-            `Iniciando captura isolada da base ${base}...`,
-          );
-          // Re-abre o simulador para cada base (estado limpo, sem re-login/2FA)
-          await page.goto(
-            "https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true",
-            {
-              waitUntil: "domcontentloaded",
-              timeout: 30000,
-            },
-          );
-          await page.waitForTimeout(TIMEOUT_3S);
           await closeModal();
-          await page.waitForTimeout(1000);
-
-          await selecionarBase(base);
-          await simularPreços(base);
-          await captureBase(base);
-          await closeModal();
-          await logEtapa(
-            postoAbrev,
-            `captura-${base}`,
-            `Captura isolada da base ${base} concluída.`,
-          );
-        } catch (err) {
-          await logEtapa(
-            postoAbrev,
-            `captura-${base}`,
-            `ERRO: ${(err as Error).message}`,
-          );
-          await diagnosticarErro(`captura-${base}`, base);
-          continue;
-        }
+        } catch {}
+        continue;
       }
-    } catch (err) {
-      await logEtapa(
-        postoAbrev,
-        `captura-geral`,
-        `Erro na captura: ${(err as Error).message}`,
-      );
-    } finally {
-      await browser.close();
     }
-
-    return precos;
   } catch (err) {
     await logEtapa(
       postoAbrev,
       "captura-geral",
       `Erro na captura: ${(err as Error).message}`,
     );
+  } finally {
+    await browser.close();
   }
+
+  return precos;
 }
 async function main() {
   try {
@@ -711,7 +674,9 @@ async function main() {
       : (postos || []).filter((p) => p.abreviacao === postoFilter);
 
     const dataArg = process.argv.find((a) => a.startsWith("--data="));
-    const dataCaptura = dataArg ? dataArg.split("=")[1] : new Date().toISOString().slice(0, 10);
+    const dataCaptura = dataArg
+      ? dataArg.split("=")[1]
+      : new Date().toISOString().slice(0, 10);
 
     // Deleta precos fonte='vibra' da data selecionada antes de gravar
     const start = `${dataCaptura}T00:00:00.000Z`;
@@ -736,9 +701,6 @@ async function main() {
         posto.abreviacao,
         bases,
       );
-      for (const p of precos) {
-        // preço formatado abaixo no logEtapa ou removido
-      }
 
       for (const p of precos) {
         if (!(p.preco > 0 && p.preco < VIBRA_MAX_PRECO)) {
@@ -808,15 +770,17 @@ async function main() {
               `Erro update ${p.base}: ${updError.message}`,
             );
         } else {
-          const { error: insError } = await supabase.from("cotacoes").insert({
-            posto_id: posto.id,
-            combustivel_id: combustivelId,
-            fornecedor_id: fornecedorId,
-            preco: p.preco,
-            fonte: "vibra",
-            data_registro: now,
-            base_id: baseId,
-          });
+          const { error: insError } = await supabase
+            .from("cotacoes")
+            .insert({
+              posto_id: posto.id,
+              combustivel_id: combustivelId,
+              fornecedor_id: fornecedorId,
+              preco: p.preco,
+              fonte: "vibra",
+              data_registro: now,
+              base_id: baseId,
+            });
           if (insError)
             await logEtapa(
               posto.abreviacao,
