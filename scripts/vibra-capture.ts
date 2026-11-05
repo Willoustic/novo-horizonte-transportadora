@@ -1,4 +1,5 @@
 import { chromium } from "playwright-extra";
+import type { Page } from "playwright";
 import stealth from "puppeteer-extra-plugin-stealth";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
@@ -29,6 +30,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const TIMEOUT_30S = 30000;
 const TIMEOUT_20S = 20000;
 const TIMEOUT_10S = 10000;
+const TIMEOUT_15S = 15000;
 const TIMEOUT_8S = 8000;
 const TIMEOUT_3S = 3000;
 const TIMEOUT_5S = 5000;
@@ -55,7 +57,17 @@ interface VibraPreco {
   produto: string;
   preco: number;
   base: string;
-  posto: string;
+  posto?: string;
+}
+
+function parsePreco(texto: string): number {
+  const limpo = texto
+    .replace(/R\$/g, "")
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(/,/g, ".");
+  const valor = parseFloat(limpo);
+  return Number.isFinite(valor) ? valor : 0;
 }
 
 async function getParam(grupo: string, chave: string): Promise<string | null> {
@@ -113,15 +125,29 @@ async function waitFor2FACode(since: Date): Promise<string | null> {
   }
 }
 
-export function extractPrices(
-  bodyText: string,
-): { produto: string; preco: string }[] {
-  const results: { produto: string; preco: string }[] = [];
-  const regex =
-    /([A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç][A-Za-zÁÉÍÓÚÃÕÇáéíóúãõç\s\d]+?)\s*\n\s*COD:\d+\s*\n\s*Base:\s*\n\s*(?:\w+\s*\n\s*)?Preço:\s*R\$\s*([\d.,]+)/g;
-  let m;
-  while ((m = regex.exec(bodyText)) !== null) {
-    results.push({ produto: m[1].trim(), preco: m[2] });
+export async function extractPrices(
+  page: Page,
+  base: string,
+): Promise<VibraPreco[]> {
+  const results: VibraPreco[] = [];
+  const dialog = page.locator("mat-dialog-container:visible");
+  if ((await dialog.count()) === 0) {
+    return results;
+  }
+  const table = dialog.locator("table.simulador-table");
+  if ((await table.count()) === 0) {
+    return results;
+  }
+  const rows = table.locator("tbody tr");
+  const rowCount = await rows.count();
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
+    const produto = (await row.locator("td").nth(0).innerText()).trim();
+    const precoTexto = (await row.locator("td").nth(2).innerText()).trim();
+    const preco = parsePreco(precoTexto);
+    if (produto && preco > 0) {
+      results.push({ produto, preco, base });
+    }
   }
   return results;
 }
@@ -309,28 +335,40 @@ async function captureForPosto(
         `Iniciando captura de preços para a base ${base}...`,
       );
       await screenshotEtapa(`4-captura-${base}-antes`);
-      const bodyText = await page.evaluate(() => document.body.innerText);
-      const prices = extractPrices(bodyText);
-      for (const p of prices) {
-        const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-        if (preco > 0) {
-          precos.push({ produto: p.produto, preco, base, posto: postoNome });
-        }
+
+      // Confirma que o modal está visível antes de capturar os preços.
+      const modalVisivel =
+        (await page.locator("mat-dialog-container:visible").count()) > 0;
+      if (!modalVisivel) {
+        await logEtapa(
+          postoAbrev,
+          `4-captura-${base}`,
+          "AVISO: modal 'Simulador de Preços' não está visível para a captura.",
+        );
       }
-      await logEtapa(
-        postoAbrev,
-        `4-captura-${base}`,
-        `${prices.length} preço(ões) extraído(s) para a base ${base}.`,
-      );
+
+      const prices = await extractPrices(page, base);
+
+      if (prices.length === 0) {
+        await logEtapa(
+          postoAbrev,
+          `4-captura-${base}`,
+          `ERRO: nenhum preço extraído para a base ${base} (verificar se o modal e a tabela renderizaram).`,
+        );
+      } else {
+        await logEtapa(
+          postoAbrev,
+          `4-captura-${base}`,
+          `${prices.length} preço(ões) extraído(s) para a base ${base}.`,
+        );
+      }
       for (const p of prices) {
-        const preco = parseFloat(p.preco.replace(/\./g, "").replace(",", "."));
-        if (preco > 0) {
-          await logEtapa(
-            postoAbrev,
-            `4-captura-${base}`,
-            `  -> ${p.produto} | Base: ${base} | R$ ${preco.toFixed(4)}`,
-          );
-        }
+        precos.push({ ...p, posto: postoNome });
+        await logEtapa(
+          postoAbrev,
+          `4-captura-${base}`,
+          `  -> ${p.produto} | Base: ${p.base} | R$ ${p.preco.toFixed(4)}`,
+        );
       }
       await screenshotEtapa(`4-captura-${base}-depois`);
       await logEtapa(
@@ -358,7 +396,14 @@ async function captureForPosto(
       const closeBtn = await page.$('i.md-icons:has-text("close")');
       if (closeBtn) {
         await closeBtn.click({ force: true });
-        await page.waitForTimeout(2000);
+        try {
+          await page.waitForSelector("mat-dialog-container", {
+            state: "hidden",
+            timeout: TIMEOUT_10S,
+          });
+        } catch {
+          // Modal pode já estar fechado ou não existir; prossegue.
+        }
         await logEtapa(postoAbrev, "modal", "modal fechado");
       }
     }
@@ -418,12 +463,10 @@ async function captureForPosto(
         );
       }
       await formField.click({ force: true });
-      await page.waitForTimeout(TIMEOUT_1_5S);
 
       const addBtn = await page.$("i.md-icons.adicionar-bases-icon");
       if (addBtn) {
         await addBtn.click({ force: true });
-        await page.waitForTimeout(TIMEOUT_1_5S);
       }
 
       const input = await page.$("input.mat-autocomplete-trigger");
@@ -434,16 +477,44 @@ async function captureForPosto(
       }
       await input.fill("");
       await input.type(base, { delay: 100 });
-      await page.waitForTimeout(TIMEOUT_1_5S);
+
+      // Aguarda a opção da base aparecer no dropdown.
+      try {
+        await page.waitForSelector(`mat-option:has-text("${base}")`, {
+          timeout: TIMEOUT_10S,
+        });
+      } catch {
+        await logEtapa(
+          postoAbrev,
+          `selecionar-base-${base}`,
+          `AVISO: mat-option "${base}" não apareceu no dropdown dentro do timeout.`,
+        );
+      }
 
       const option = await page.$(`mat-option:has-text("${base}")`);
       if (!option) {
         throw new Error(`mat-option "${base}" não encontrada no dropdown`);
       }
       await option.click({ force: true });
-      await page.waitForTimeout(TIMEOUT_1_5S);
 
-      // Verifica se a base foi realmente selecionada antes de simular
+      // Verifica se a base foi realmente selecionada antes de simular.
+      try {
+        await page.waitForFunction(
+          (b) => {
+            const el = document.querySelector("div.mat-form-field-flex");
+            return el?.textContent?.includes(b) ?? false;
+          },
+          base,
+          { timeout: TIMEOUT_10S },
+        );
+      } catch {
+        await logEtapa(
+          postoAbrev,
+          `selecionar-base-${base}`,
+          `AVISO: base "${base}" não confirmada no campo de seleção.`,
+        );
+      }
+
       const selecionado = await page.$("div.mat-form-field-flex");
       const texto = selecionado ? await selecionado.innerText() : "";
       if (!texto.includes(base)) {
@@ -472,28 +543,47 @@ async function captureForPosto(
         throw new Error(`botão "Simular preços" não encontrado para ${base}`);
       }
       await btn.click({ force: true });
-      await page.waitForTimeout(TIMEOUT_3S);
-      // Baseline do texto ANTES da renderização; só prossegue quando o corpo mudar de verdade
-      // (evita retornar precos de base anterior/cached quando o corpo ja contem 'R$').
-      const textoAntes = await page.evaluate(() => document.body.innerText);
-      const deadline = Date.now() + 30000;
-      while (Date.now() < deadline) {
-        const corpo = await page.evaluate(() => document.body.innerText);
-        if (corpo !== textoAntes && /R\$\s*[\d.,]+/.test(corpo)) {
-          await logEtapa(
-            postoAbrev,
-            `simular-${base}`,
-            "Preços renderizados para a base.",
-          );
-          return;
-        }
-        await page.waitForTimeout(TIMEOUT_1_5S);
+
+      // Aguarda o modal 'Simulador de Preços' aparecer (mat-dialog-container visível).
+      try {
+        await page.waitForSelector("mat-dialog-container", {
+          state: "visible",
+          timeout: TIMEOUT_30S,
+        });
+        await logEtapa(
+          postoAbrev,
+          `simular-${base}`,
+          "Modal 'Simulador de Preços' detectado.",
+        );
+      } catch (e) {
+        await logEtapa(
+          postoAbrev,
+          `simular-${base}`,
+          `AVISO: modal não apareceu dentro do timeout: ${(e as Error).message}`,
+        );
       }
-      await logEtapa(
-        postoAbrev,
-        `simular-${base}`,
-        "AVISO: tempo esgotado aguardando preços (prosseguindo com captura).",
-      );
+
+      // Aguarda pelo menos uma linha de preço renderizada na tabela do modal.
+      try {
+        await page.waitForFunction(
+          () =>
+            document.querySelector(
+              "mat-dialog-container table.simulador-table tbody tr",
+            ) !== null,
+          { timeout: TIMEOUT_30S },
+        );
+        await logEtapa(
+          postoAbrev,
+          `simular-${base}`,
+          "Tabela de preços renderizada no modal.",
+        );
+      } catch (e) {
+        await logEtapa(
+          postoAbrev,
+          `simular-${base}`,
+          `AVISO: tabela de preços não renderizada: ${(e as Error).message}`,
+        );
+      }
     }
 
     // Captura uma base por vez, em estado limpo, sem contaminação entre bases.
@@ -555,6 +645,7 @@ async function captureForPosto(
       "captura-geral",
       `Erro na captura: ${(err as Error).message}`,
     );
+    return [];
   }
 }
 async function main() {
