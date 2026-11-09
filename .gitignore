@@ -11,4 +11,6 @@ supabase/.temp
 Thumbs.db
 .vercel
 .env*
+tmp/
 tsconfig.tsbuildinfo
+.maestri/

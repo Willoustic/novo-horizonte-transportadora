@@ -26,6 +26,6 @@
 
 ## Limitacoes do Free Tier
 
-- Vercel: serverless functions timeout 10s (ok para MVP sem scraping)
+- Vercel: serverless functions timeout 10s padrao; rota `/api/capturar-vibra` com `maxDuration: 300s` (`vercel.json`). Playwright/Chromium pode não rodar no free tier — validar em ambiente com Chromium instalado.
 - Supabase: pausa apos 7 dias de inatividade (reativa ao acessar)
 - Sem SLA
