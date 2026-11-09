@@ -159,7 +159,7 @@ export default function CotacoesPage() {
         : "Capturando todos os postos...",
     );
     try {
-      const res = await fetch("/api/vibra/capturar", {
+      const res = await fetch("/api/capturar-vibra", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
