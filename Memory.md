@@ -1,7 +1,7 @@
 ﻿# Memory — Novo Horizonte Transportadora de Combustíveis
 
 > Arquivo de memória do projeto. Referencia toda a documentação em /docs.
-> Última atualização: 2026-11-05
+> Última atualização: 2026-11-09
 
 ## Visão Geral
 
@@ -105,9 +105,31 @@ Vibra, Setta, Larco, Petrovia
 - `vercel.json`: `maxDuration: 300` para a rota de captura. `.env.example` com variáveis de ambiente (sem segredos reais). Workflow CI `.github/workflows/ci.yml` adicionado.
 - Branch `fix/vibra-preco-por-base` (commit 7ce4ba1) pushada ao origin; PR #4 mergeado em master (commit a5a66a6).
 
+### Correções aplicadas (2026-11-09) — Fase 2 (Item 3, tarefas T2.1–T2.7)
+
+Branch `feature/vibra-capture-melhorada` (a partir de `fix/vibra-preco-por-base`, commit 69a41bc).
+
+- T2.1: `.env.example` typo `VIBRA_EMAIL_PAS` → `VIBRA_EMAIL_PASS`; `tmp/` adicionado ao `.gitignore` (screenshots).
+- T2.2: `checkChromiumAvailable()` valida a presença do executável do Chromium antes de lançar o navegador; falha graciosa quando ausente.
+- T2.3: Todos os `page.waitForTimeout` substituídos por `waitForSelector`/`waitForFunction` com polling + timeout explícito. Log explícito "portal indisponível para este posto" para PNH2-ZN em vez de falha silenciosa.
+- T2.4: `retryWithBackoff` (3 tentativas, backoff exponencial com teto de 15s) para login/2FA e simulação de preços por base.
+- T2.5: Credenciais e código 2FA nunca logados nem retornados; screenshots salvos em `tmp/` (apenas o nome do arquivo é logado).
+- T2.6: Saída estruturada `CapturaResumo` JSON no `stdout`; diagnóstico em `stderr`. Endpoint `POST /api/capturar-vibra` retorna resumo estruturado (postos processados, bases com/sucesso, contagem de preços, erros por base) sem expor `stdout/stderr` brutos. `main()` grava upsert de `cotacoes` (fonte='vibra') + `historico_precos` por preço via `PostoResultado.precos`.
+- T2.7: Validação local com Chromium aprovada — lançamento, carregamento de páginas e fechamento limpo (`LOCAL_CHROMIUM_VALIDATION=OK`).
+- Documentação: `docs/08-deployment.md` (seção limitação do Vercel Free — serverless sem Chromium; credenciais lidas de env/secrets) e `docs/12-changelog.md` (versão 0.1.5).
+
+### Verificação
+
+- `tsc --noEmit`: sem erros.
+- `npm test`: 15/15 testes passando (decrypt + extractPrices).
+- `npm run lint`: apenas avisos pré-existentes em páginas não relacionadas.
+
 ### Próximo passo
 
-- Configurar Vercel environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`.
-- Testar `/api/capturar-vibra` a partir do portal (botão "Capturar Vibra" já conectado ao novo endpoint).
-- Limitação conhecida: Vercel serverless + Playwright/Chromium pode não rodar em produção; validar captura em ambiente com Chromium instalado.
+- Commit com Conventional Commits em `feature/vibra-capture-melhorada`; abrir PR antes de mergear em master.
+- Executar `maestri ask "OpenCode" "<resultado da Fase 2: captura Vibra melhorada>"`.
+
+### Limitação conhecida
+
+- Vercel serverless + Playwright/Chromium não roda em produção na Vercel Free (sem Chromium instalado). Usar GitHub Actions (runner com Chromium) para captura em produção; endpoint direto `/api/capturar-vibra` para ambientes com Chromium instalado.
 - PNH2-ZN Vibra capture: portal não renderiza tabela de preços (problema de conta/portal Vibra, não de código).

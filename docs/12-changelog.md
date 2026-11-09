@@ -1,5 +1,35 @@
 # 12 - Changelog
 
+## [0.1.5] - 2026-11-09
+
+### Adicionado
+
+- Robustez do script `scripts/vibra-capture.ts`: `checkChromiumAvailable()` valida a presença do executável do Chromium antes de lançar o navegador; falha graciosa quando ausente.
+- Substituição de todos os `page.waitForTimeout` (espera fixa) por `waitForSelector`/`waitForFunction` com polling + timeout explícito.
+- Log explícito "portal indisponível para este posto" para PNH2-ZN em vez de falha silenciosa.
+- Retry com backoff exponencial (`retryWithBackoff`, 3 tentativas, teto de 15s) para login/2FA e simulação de preços por base.
+- Credenciais e código 2FA nunca logados ou retornados; screenshots salvos em `tmp/` (apenas o nome do arquivo é logado).
+- Saída estruturada `CapturaResumo` JSON no `stdout` do script; diagnóstico enviado para `stderr`.
+- Endpoint `POST /api/capturar-vibra` retorna resumo estruturado (postos processados, bases com/sucesso, contagem de preços, erros por base) sem expor `stdout/stderr` brutos.
+- `main()` grava no banco: upsert de `cotacoes` (fonte='vibra') + inserção de `historico_precos` por preço, via `PostoResultado.precos` exposto.
+- Documentação da limitação do Vercel Free (serverless sem Chromium) em `docs/08-deployment.md`.
+
+### Corrigido
+
+- `.env.example`: corrigido typo `VIBRA_EMAIL_PAS` → `VIBRA_EMAIL_PASS`.
+- `.gitignore`: adicionada a pasta `tmp/` (screenshots, gitignorado).
+
+### Implantação
+
+- Branch `feature/vibra-capture-melhorada` criada a partir de `fix/vibra-preco-por-base` (commit 69a41bc).
+
+### Verificação
+
+- `tsc --noEmit`: sem erros.
+- `npm test`: 15/15 testes passando (decrypt + extractPrices).
+- `npm run lint`: apenas avisos pré-existentes em páginas não relacionadas.
+- Validação local com Chromium: lançamento, carregamento de páginas e fechamento limpo (`LOCAL_CHROMIUM_VALIDATION=OK`).
+
 ## [0.1.4] - 2026-11-05
 
 ### Adicionado

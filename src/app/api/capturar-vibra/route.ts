@@ -12,6 +12,10 @@ const execFileAsync = promisify(execFile);
  * Dispara a captura de preços da Vibra via script standalone.
  * Requer autenticação (perfil admin ou padrao).
  * Aceita corpo opcional: { "posto": "VITORIA" } para filtrar por posto.
+ *
+ * Resposta padronizada: nunca expõe stdout/stderr brutos do script.
+ * O resumo estruturado (CapturaResumo) vem do stdout do script; diagnósticos
+ * vão para stderr e não são expostos na resposta.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const supabase = await createClient();
@@ -42,12 +46,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const { stdout, stderr } = await execFileAsync(
+    const { stdout } = await execFileAsync(
       "npx",
       ["tsx", "scripts/vibra-capture.ts", ...args],
       {
         cwd: process.cwd(),
-        timeout: 300_000, // 5 minutos
+        timeout: 300_000, // 5 minutos (alinhado com vercel.json maxDuration)
         env: {
           ...process.env,
           NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -57,19 +61,32 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
     );
 
+    // T2.6: stdout contém o JSON estruturado CapturaResumo.
+    // Diagnósticos vão para stderr (console.error) e não são expostos na resposta.
+    let resumo: unknown;
+    try {
+      resumo = JSON.parse(stdout);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Saída do script de captura não é um JSON válido.",
+        },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: "Captura de preços da Vibra concluída.",
-      output: stdout,
-      stderr,
+      resumo,
     });
   } catch (err: any) {
+    // Nunca expõe stdout/stderr brutos (podem conter diagnósticos sensíveis).
     return NextResponse.json(
       {
         success: false,
-        error: err.message,
-        stderr: err.stderr,
-        stdout: err.stdout,
+        error: err.message || "Falha ao executar captura de preços da Vibra.",
       },
       { status: 500 },
     );

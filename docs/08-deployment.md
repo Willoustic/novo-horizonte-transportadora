@@ -46,8 +46,8 @@ Usados pelo workflow `.github/workflows/vibra-capture.yml`:
 - `ENCRYPTION_KEY`
 - `SUPABASE_URL` (mapeado para `NEXT_PUBLIC_SUPABASE_URL` no workflow)
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
-- `VIBRA_EMAIL_PASS` (senha de app Gmail — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
+- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — lido de `process.env.VIBRA_EMAIL_USER` no script; nunca hardcoded)
+- `VIBRA_EMAIL_PASS` (senha de app Gmail — lido de `process.env.VIBRA_EMAIL_PASS` no script; nunca hardcoded)
 
 ## Migrations do Supabase (aplicacao manual)
 
@@ -97,7 +97,31 @@ Segredos necessarios no repo GitHub (lista acima): `NEXT_PUBLIC_SUPABASE_URL`, `
 
 Producao: https://nh-transportadora.vercel.app (deploy automatico a cada push em `master`).
 
-> Limite do Vercel Free: serverless + Playwright/Chromium pode não funcionar em produção sem Chromium instalado. Validar a captura em ambiente com Chromium disponível antes de depender do endpoint direto.
+## Limite do Vercel Free — Playwright/Chromium
+
+O endpoint `POST /api/capturar-vibra` depende de Playwright/Chromium para navegar no portal Vibra. No **Vercel Free (serverless)** há um limitação conhecida: **o Chromium não está disponível por padrão no ambiente serverless da Vercel** e não pode ser instalado via `playwright install` em build de produção. Isso significa que a captura automática direta pelo endpoint `/api/capturar-vibra` **não funciona em produção na Vercel Free**.
+
+### Impacto
+
+- A rota `/api/capturar-vibra` lançará erro ao tentar iniciar `chromium.launch()` em serverless (sem executável do Chromium).
+- O endpoint continua disponível localmente e em ambientes onde o Chromium esteja instalado (ex.: runner do GitHub Actions com `playwright install` ou máquina dev com ms-playwright).
+
+### Validação local (obrigatória antes de depender do endpoint)
+
+Execução validada localmente com Chromium do ms-playwright:
+
+```
+npx tsx scripts/vibra-capture.ts [--posto=ABREV]
+```
+
+Chromium utilizado: `C:\Users\POSTO NH\AppData\Local\ms-playwright\chromium-1248\chrome-win64\chrome.exe`
+Resultado: lançamento, carregamento de páginas e fechamento limpo — `LOCAL_CHROMIUM_VALIDATION=OK`.
+
+### Recomendação de produção
+
+Para produção na Vercel Free, use a alternativa via **GitHub Actions** (workflow `.github/workflows/vibra-capture.yml`), que roda em runner com Chromium disponível e dispara a rota `POST /api/vibra/capturar` para persistir os preços. O endpoint direto `/api/capturar-vibra` permanece para ambientes com Chromium instalado (dev/local/outros provedores).
+
+Alternativamente, migrar a captura para um worker dedicado fora do serverless da Vercel Free.
 
 ## Procedimentos locais (dev)
 
