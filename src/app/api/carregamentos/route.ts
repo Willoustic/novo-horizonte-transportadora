@@ -1,6 +1,25 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles";
+
+const carregamentoSchema = z.object({
+  posto_destino_id: z.string().min(1, "posto destino obrigatório"),
+  motorista_id: z.string().min(1, "motorista obrigatório"),
+  cavalo_id: z.string().min(1, "cavalo obrigatório"),
+  tanque_carreta_id: z.string().min(1, "tanque/carreta obrigatório"),
+  volume: z.number().positive("volume deve ser maior que zero"),
+  base_id: z.string().min(1, "base obrigatória").optional(),
+  status: z.string().optional(),
+  data: z
+    .string()
+    .optional()
+    .refine(
+      (value) => value === undefined || !isNaN(Date.parse(value)),
+      "data inválida",
+    ),
+  base_origem: z.string().optional(),
+});
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -48,7 +67,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
   const body = await request.json();
-  const { base_origem, ...rest } = body;
+  const parsed = carregamentoSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Dados inválidos", issues: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+  const { base_origem, ...rest } = parsed.data;
   // base_origem (texto) e mantido para compatibilidade; base_id e a FK nova
   const insertData = { ...rest };
   if (base_origem) {

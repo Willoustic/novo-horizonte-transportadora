@@ -1,6 +1,20 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles";
+
+const pedidoUpdateSchema = z.object({
+  status: z
+    .enum([
+      "pendente",
+      "aprovado",
+      "em_carregamento",
+      "concluido",
+      "cancelado",
+    ])
+    .optional(),
+  observacoes: z.string().optional(),
+});
 
 export async function GET(
   request: Request,
@@ -48,9 +62,17 @@ export async function PUT(
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
   const body = await request.json();
+  const parsed = pedidoUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Dados inválidos", issues: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+  const { status, observacoes } = parsed.data;
   const updateData: Record<string, unknown> = {};
-  if (body.status) updateData.status = body.status;
-  if (body.observacoes !== undefined) updateData.observacao = body.observacoes;
+  if (status !== undefined) updateData.status = status;
+  if (observacoes !== undefined) updateData.observacao = observacoes;
 
   const { data, error } = await supabase
     .from("pedidos")
