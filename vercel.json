@@ -12,6 +12,7 @@
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
     "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "ENCRYPTION_KEY": "@encryption_key"
+    "ENCRYPTION_KEY": "@encryption_key",
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
   }
 }
