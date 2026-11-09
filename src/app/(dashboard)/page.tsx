@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Package,
   Truck,
@@ -16,6 +15,8 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateToDB } from "@/lib/date-utils";
+import { DataTable } from "@/components/shared/DataTable";
+import { useFetchData } from "@/components/shared/use-fetch-data";
 
 interface LitragemRow {
   posto: string;
@@ -42,180 +43,211 @@ interface PrecoRow {
 }
 
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(true);
-  const [litragem, setLitragem] = useState<LitragemRow[]>([]);
-  const [carreg, setCarreg] = useState<CarregRow[]>([]);
-  const [estoque, setEstoque] = useState<EstoqueRow[]>([]);
-  const [precos, setPrecos] = useState<PrecoRow[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const dateStr = formatDateToDB(selectedDate);
-  const supabase = createClient();
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        // 1. Litragem total de pedidos por posto x combustivel
-        const { data: pedidos } = await supabase
-          .from("pedidos")
-          .select(
-            "id, posto_id, postos(nome, abreviacao), itens_pedido(volume_solicitado, combustivel_id, combustiveis(nome, abreviacao))",
-          )
-          .eq("data", dateStr);
-        const litMap: Record<string, number> = {};
-        const pedidoCombMap: Record<string, Set<string>> = {};
-        (pedidos || []).forEach((p: any) => {
-          const posto = p.postos?.abreviacao || p.postos?.nome || "?";
-          const combs = new Set<string>();
-          (p.itens_pedido || []).forEach((it: any) => {
-            const comb =
-              it.combustiveis?.abreviacao || it.combustiveis?.nome || "?";
-            combs.add(comb);
-            const key = `${posto}|${comb}`;
-            litMap[key] =
-              (litMap[key] || 0) + Number(it.volume_solicitado || 0);
-          });
-          pedidoCombMap[p.id] = combs;
-        });
+  const pedidosUrl = `/api/pedidos?data=${dateStr}`;
+  const carregamentosUrl = `/api/carregamentos?data=${dateStr}`;
+  const estoqueUrl = `/api/estoque?data=${dateStr}`;
+  const cotacoesUrl = `/api/cotacoes?data=${dateStr}`;
 
-        // bases per posto x combustivel from carregamentos (base_id FK -> bases.abreviacao)
-        const basesMap: Record<string, Set<string>> = {};
-        const postoById: Record<string, string> = {};
-        const { data: postosAll } = await supabase
-          .from("postos")
-          .select("id, abreviacao, nome");
-        (postosAll || []).forEach((po: any) => {
-          postoById[po.id] = po.abreviacao || po.nome || "?";
-        });
-        const { data: carregBase } = await supabase
-          .from("carregamentos")
-          .select("base:bases(abreviacao), posto_destino_id, pedido_id");
-        (carregBase || []).forEach((c: any) => {
-          const posto = postoById[c.posto_destino_id] || "?";
-          const baseAbbr = c.base?.abreviacao;
-          const bases = baseAbbr ? [baseAbbr] : [];
-          const combs =
-            c.pedido_id && pedidoCombMap[c.pedido_id]
-              ? Array.from(pedidoCombMap[c.pedido_id])
-              : [];
-          const targetCombs = combs.length ? combs : bases.length ? ["?"] : [];
-          targetCombs.forEach((comb: string) => {
-            const key = `${posto}|${comb}`;
-            if (!basesMap[key]) basesMap[key] = new Set();
-            bases.forEach((b: string) => basesMap[key].add(b));
-          });
-        });
+  const { data: pedidosData, loading: pedidosLoading } = useFetchData<any[]>(
+    pedidosUrl,
+    [dateStr],
+  );
+  const { data: carregData, loading: carregLoading } = useFetchData<any[]>(
+    carregamentosUrl,
+    [dateStr],
+  );
+  const { data: estoqueData, loading: estoqueLoading } = useFetchData<any[]>(
+    estoqueUrl,
+    [dateStr],
+  );
+  const { data: cotacoesData, loading: cotacoesLoading } = useFetchData<any[]>(
+    cotacoesUrl,
+    [dateStr],
+  );
 
-        setLitragem(
-          Object.entries(litMap).map(([k, v]) => {
-            const [posto, combustivel] = k.split("|");
-            const bs = basesMap[k];
-            return {
-              posto,
-              combustivel,
-              bases: bs && bs.size ? Array.from(bs).join(",") : "-",
-              total: v,
-            };
-          }),
-        );
+  const loading =
+    pedidosLoading || carregLoading || estoqueLoading || cotacoesLoading;
 
-        // 2. Carregamento por motorista
-        const { data: carregamentos } = await supabase
-          .from("carregamentos")
-          .select(
-            "volume, base:bases(abreviacao), motoristas(nome), cavalos(placa), tanques_carreta(identificacao)",
-          )
-          .eq("data", dateStr);
-        const carMap: Record<
-          string,
-          { motorista: string; cavalo: string; tanque: string; total: number }
-        > = {};
-        (carregamentos || []).forEach((c: any) => {
-          const m = c.motoristas?.nome || "?";
-          const key = m;
-          if (!carMap[key])
-            carMap[key] = {
-              motorista: m,
-              cavalo: c.cavalos?.placa || "-",
-              tanque: c.tanques_carreta?.identificacao || "-",
-              total: 0,
-            };
-          carMap[key].total += Number(c.volume || 0);
-        });
-        setCarreg(Object.values(carMap));
+  // --- Litragem: pedidos itens agrupados por posto x combustível, bases via carregamentos ---
+  const litragem = useMemo<LitragemRow[]>(() => {
+    const pedidos = pedidosData || [];
+    const carregs = carregData || [];
 
-        // 3. Estoque por empresa (filial)
-        const { data: snaps } = await supabase
-          .from("estoque_snapshots")
-          .select(
-            "volume, tanques_posto(combustivel_id, postos(nome, abreviacao, tipo), combustiveis(abreviacao, nome))",
-          )
-          .eq("data", dateStr);
-        const estMap: Record<string, number> = {};
-        (snaps || []).forEach((s: any) => {
-          const tp = s.tanques_posto;
-          if (tp?.postos?.tipo !== "FILIAL") return;
-          const posto = tp.postos?.abreviacao || tp.postos?.nome || "?";
-          const comb =
-            tp.combustiveis?.abreviacao || tp.combustiveis?.nome || "?";
-          const key = `${posto}|${comb}`;
-          estMap[key] = (estMap[key] || 0) + Number(s.volume || 0);
-        });
-        setEstoque(
-          Object.entries(estMap).map(([k, v]) => {
-            const [posto, combustivel] = k.split("|");
-            return { posto, combustivel, volume: v };
-          }),
-        );
+    const litMap: Record<string, number> = {};
+    const pedidoCombMap: Record<string, Set<string>> = {};
+    (pedidos || []).forEach((p: any) => {
+      const posto = p.posto?.abreviacao || p.posto?.nome || "?";
+      const combs = new Set<string>();
+      (p.itens || []).forEach((it: any) => {
+        const comb =
+          it.combustivel?.abreviacao || it.combustivel?.nome || "?";
+        combs.add(comb);
+        const key = `${posto}|${comb}`;
+        litMap[key] = (litMap[key] || 0) + Number(it.volume_solicitado || 0);
+      });
+      pedidoCombMap[p.id] = combs;
+    });
 
-        // 4. Melhor preco por posto x produto (min) — filtro por data_registro no dia selecionado
-        const dataStart = `${dateStr}T00:00:00Z`;
-        const dataEnd = `${dateStr}T23:59:59Z`;
-        const { data: cotacoes } = await supabase
-          .from("cotacoes")
-          .select(
-            "preco, base:bases(abreviacao), postos(abreviacao, nome), combustiveis(abreviacao, nome)",
-          )
-          .gte("data_registro", dataStart)
-          .lte("data_registro", dataEnd);
-        const precoMap: Record<string, { preco: number; base: string }> = {};
-        (cotacoes || []).forEach((c: any) => {
-          const posto = c.postos?.abreviacao || c.postos?.nome || "?";
-          const comb =
-            c.combustiveis?.abreviacao || c.combustiveis?.nome || "?";
-          const base = c.base?.abreviacao || "-";
-          const key = `${posto}|${comb}`;
-          const p = Number(c.preco || 0);
-          if (!(key in precoMap) || p < precoMap[key].preco)
-            precoMap[key] = { preco: p, base };
-        });
-        const precosArr = Object.entries(precoMap)
-          .map(([k, v]) => {
-            const [posto, combustivel] = k.split("|");
-            return { posto, combustivel, base: v.base, preco: v.preco };
-          })
-          .sort(
-            (a, b) =>
-              a.posto.localeCompare(b.posto) ||
-              a.combustivel.localeCompare(b.combustivel),
-          );
-        setPrecos(precosArr);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [supabase, dateStr]);
+    const basesMap: Record<string, Set<string>> = {};
+    (carregs || []).forEach((c: any) => {
+      const posto = c.posto_destino?.abreviacao || c.posto_destino?.nome || "?";
+      const baseAbbr = c.base?.abreviacao;
+      const bases = baseAbbr ? [baseAbbr] : [];
+      const combs =
+        c.pedido_id && pedidoCombMap[c.pedido_id]
+          ? Array.from(pedidoCombMap[c.pedido_id])
+          : [];
+      const targetCombs = combs.length ? combs : bases.length ? ["?"] : [];
+      targetCombs.forEach((comb: string) => {
+        const key = `${posto}|${comb}`;
+        if (!basesMap[key]) basesMap[key] = new Set();
+        bases.forEach((b: string) => basesMap[key].add(b));
+      });
+    });
+
+    return Object.entries(litMap).map(([k, v]) => {
+      const [posto, combustivel] = k.split("|");
+      const bs = basesMap[k];
+      return {
+        posto,
+        combustivel,
+        bases: bs && bs.size ? Array.from(bs).join(",") : "-",
+        total: v,
+      };
+    });
+  }, [pedidosData, carregData]);
+
+  // --- Carregamento por motorista ---
+  const carreg = useMemo<CarregRow[]>(() => {
+    const carregs = carregData || [];
+    const carMap: Record<
+      string,
+      { motorista: string; cavalo: string; tanque: string; total: number }
+    > = {};
+    (carregs || []).forEach((c: any) => {
+      const m = c.motorista?.nome || "?";
+      const key = m;
+      if (!carMap[key])
+        carMap[key] = {
+          motorista: m,
+          cavalo: c.cavalo?.placa || "-",
+          tanque: c.tanque_carreta?.identificacao || "-",
+          total: 0,
+        };
+      carMap[key].total += Number(c.volume || 0);
+    });
+    return Object.values(carMap);
+  }, [carregData]);
+
+  // --- Estoque por filial ---
+  const estoque = useMemo<EstoqueRow[]>(() => {
+    const snaps = estoqueData || [];
+    const estMap: Record<string, number> = {};
+    (snaps || []).forEach((s: any) => {
+      const tp = s.tanque_posto;
+      if (tp?.posto?.tipo !== "FILIAL") return;
+      const posto = tp.posto?.abreviacao || tp.posto?.nome || "?";
+      const comb = tp.combustivel?.abreviacao || tp.combustivel?.nome || "?";
+      const key = `${posto}|${comb}`;
+      estMap[key] = (estMap[key] || 0) + Number(s.volume || 0);
+    });
+    return Object.entries(estMap).map(([k, v]) => {
+      const [posto, combustivel] = k.split("|");
+      return { posto, combustivel, volume: v };
+    });
+  }, [estoqueData]);
+
+  // --- Melhor preço por posto x produto ---
+  const precos = useMemo<PrecoRow[]>(() => {
+    const cotacoes = cotacoesData || [];
+    const precoMap: Record<string, { preco: number; base: string }> = {};
+    (cotacoes || []).forEach((c: any) => {
+      const posto = c.posto?.abreviacao || c.posto?.nome || "?";
+      const comb = c.combustivel?.abreviacao || c.combustivel?.nome || "?";
+      const base = c.base?.abreviacao || "-";
+      const key = `${posto}|${comb}`;
+      const p = Number(c.preco || 0);
+      if (!(key in precoMap) || p < precoMap[key].preco)
+        precoMap[key] = { preco: p, base };
+    });
+    return Object.entries(precoMap)
+      .map(([k, v]) => {
+        const [posto, combustivel] = k.split("|");
+        return { posto, combustivel, base: v.base, preco: v.preco };
+      })
+      .sort(
+        (a, b) =>
+          a.posto.localeCompare(b.posto) ||
+          a.combustivel.localeCompare(b.combustivel),
+      );
+  }, [cotacoesData]);
+
+  const litragemColumns = useMemo(
+    () => [
+      { accessorKey: "posto", header: "Posto" },
+      { accessorKey: "combustivel", header: "Combustível" },
+      { accessorKey: "bases", header: "Bases" },
+      {
+        accessorKey: "total",
+        header: "Litros",
+        cell: ({ row }: any) =>
+          row.getValue("total").toLocaleString("pt-BR"),
+      },
+    ],
+    [],
+  );
+
+  const carregColumns = useMemo(
+    () => [
+      { accessorKey: "motorista", header: "Motorista" },
+      { accessorKey: "cavalo", header: "Cavalo" },
+      { accessorKey: "tanque", header: "Tanque" },
+      {
+        accessorKey: "total",
+        header: "Litros",
+        cell: ({ row }: any) => row.getValue("total").toLocaleString("pt-BR"),
+      },
+    ],
+    [],
+  );
+
+  const estoqueColumns = useMemo(
+    () => [
+      { accessorKey: "posto", header: "Posto" },
+      { accessorKey: "combustivel", header: "Combustível" },
+      {
+        accessorKey: "volume",
+        header: "Volume",
+        cell: ({ row }: any) => row.getValue("volume").toLocaleString("pt-BR"),
+      },
+    ],
+    [],
+  );
+
+  const precosColumns = useMemo(
+    () => [
+      { accessorKey: "posto", header: "Posto" },
+      { accessorKey: "combustivel", header: "Combustível" },
+      { accessorKey: "base", header: "Base" },
+      {
+        accessorKey: "preco",
+        header: "Preço",
+        cell: ({ row }: any) => row.getValue("preco").toFixed(4),
+      },
+    ],
+    [],
+  );
 
   const shortcuts = [
     { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
     { href: "/carregamentos", label: "Carregamentos", icon: Truck },
     { href: "/estoque", label: "Estoque", icon: Package },
-    { href: "/cotacoes", label: "Cotacoes", icon: DollarSign },
+    { href: "/cotacoes", label: "Cotações", icon: DollarSign },
     { href: "/cadastros", label: "Cadastros", icon: Users },
-    { href: "/parametros", label: "Parametros", icon: Settings },
+    { href: "/parametros", label: "Parâmetros", icon: Settings },
   ];
 
   return (
@@ -226,7 +258,7 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Visao operacional
+            Visão operacional
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -249,7 +281,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Card 1: Litragem de pedidos por posto x combustivel */}
+          {/* Card 1: Litragem de pedidos por posto x combustível */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Fuel className="h-5 w-5 text-blue-600" />
@@ -257,47 +289,12 @@ export default function DashboardPage() {
                 Litragem de Pedidos por Posto
               </h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-gray-500 dark:text-gray-400">
-                  <tr>
-                    <th className="text-left py-1">Posto</th>
-                    <th className="text-left py-1">Combustivel</th>
-                    <th className="text-left py-1">Bases</th>
-                    <th className="text-right py-1">Litros</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {litragem.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-gray-400 py-2">
-                        Sem dados
-                      </td>
-                    </tr>
-                  ) : (
-                    litragem.map((r, i) => (
-                      <tr
-                        key={i}
-                        className="border-t border-gray-100 dark:border-gray-800"
-                      >
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.posto}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.combustivel}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.bases}
-                        </td>
-                        <td className="py-1 text-right font-mono text-gray-700 dark:text-gray-200">
-                          {r.total.toLocaleString("pt-BR")}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={litragemColumns}
+              data={litragem}
+              loading={false}
+              emptyMessage="Sem dados"
+            />
           </div>
 
           {/* Card 2: Carregamento por motorista */}
@@ -308,47 +305,12 @@ export default function DashboardPage() {
                 Carregamento por Motorista
               </h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-gray-500 dark:text-gray-400">
-                  <tr>
-                    <th className="text-left py-1">Motorista</th>
-                    <th className="text-left py-1">Cavalo</th>
-                    <th className="text-left py-1">Tanque</th>
-                    <th className="text-right py-1">Litros</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {carreg.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-gray-400 py-2">
-                        Sem dados
-                      </td>
-                    </tr>
-                  ) : (
-                    carreg.map((r, i) => (
-                      <tr
-                        key={i}
-                        className="border-t border-gray-100 dark:border-gray-800"
-                      >
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.motorista}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.cavalo}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.tanque}
-                        </td>
-                        <td className="py-1 text-right font-mono text-gray-700 dark:text-gray-200">
-                          {r.total.toLocaleString("pt-BR")}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={carregColumns}
+              data={carreg}
+              loading={false}
+              emptyMessage="Sem dados"
+            />
           </div>
 
           {/* Card 3: Estoque por filial */}
@@ -359,94 +321,28 @@ export default function DashboardPage() {
                 Estoque por Filial
               </h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-gray-500 dark:text-gray-400">
-                  <tr>
-                    <th className="text-left py-1">Posto</th>
-                    <th className="text-left py-1">Combustivel</th>
-                    <th className="text-right py-1">Volume</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {estoque.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="text-gray-400 py-2">
-                        Sem dados
-                      </td>
-                    </tr>
-                  ) : (
-                    estoque.map((r, i) => (
-                      <tr
-                        key={i}
-                        className="border-t border-gray-100 dark:border-gray-800"
-                      >
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.posto}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.combustivel}
-                        </td>
-                        <td className="py-1 text-right font-mono text-gray-700 dark:text-gray-200">
-                          {r.volume.toLocaleString("pt-BR")}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={estoqueColumns}
+              data={estoque}
+              loading={false}
+              emptyMessage="Sem dados"
+            />
           </div>
 
-          {/* Card 4: Melhor preco por posto x produto */}
+          {/* Card 4: Melhor preço por posto x produto */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center gap-2 mb-3">
               <DollarSign className="h-5 w-5 text-yellow-600" />
               <h2 className="font-semibold text-gray-800 dark:text-white">
-                Melhor Preco por Posto
+                Melhor Preço por Posto
               </h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-gray-500 dark:text-gray-400">
-                  <tr>
-                    <th className="text-left py-1">Posto</th>
-                    <th className="text-left py-1">Combustivel</th>
-                    <th className="text-left py-1">Base</th>
-                    <th className="text-right py-1">Preco</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {precos.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-gray-400 py-2">
-                        Sem dados
-                      </td>
-                    </tr>
-                  ) : (
-                    precos.map((r, i) => (
-                      <tr
-                        key={i}
-                        className="border-t border-gray-100 dark:border-gray-800"
-                      >
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.posto}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.combustivel}
-                        </td>
-                        <td className="py-1 text-gray-700 dark:text-gray-200">
-                          {r.base}
-                        </td>
-                        <td className="py-1 text-right font-mono text-gray-700 dark:text-gray-200">
-                          {r.preco.toFixed(4)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={precosColumns}
+              data={precos}
+              loading={false}
+              emptyMessage="Sem dados"
+            />
           </div>
         </div>
       )}
