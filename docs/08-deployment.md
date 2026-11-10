@@ -20,6 +20,8 @@ Nunca commitar valores reais. `.env*` esta no `.gitignore`. Copie `.env.example`
 | SUPABASE_SERVICE_ROLE_KEY     | Supabase Dashboard > Settings > API                                        | **Segredo.** Server-side only (scripts e rota /api/capturar-vibra) |
 | ENCRYPTION_KEY                | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | AES-256-GCM, 64 hex chars. Obrigatório para descriptografar credenciais da Vibra. |
 | NEXT_PUBLIC_APP_URL           | http://localhost:3000 (dev)                                                | Base URL da app                         |
+| VIBRA_EMAIL_USER              | Segredo do e-mail Gmail (IMAP)                                             | Usado pelo script de captura para 2FA   |
+| VIBRA_EMAIL_PASS              | Segredo da senha de app Gmail                                              | Usado pelo script de captura para 2FA   |
 | GITHUB_TOKEN                  | GitHub > Settings > Developer settings > Personal access tokens            | PAT com acesso a Actions (repo)         |
 | GITHUB_REPO_OWNER             | Willoustic                                                                 | Dono do repo                            |
 | GITHUB_REPO_NAME              | novo-horizonte-transportadora                                              | Nome do repo                            |
@@ -46,8 +48,8 @@ Usados pelo workflow `.github/workflows/vibra-capture.yml`:
 - `ENCRYPTION_KEY`
 - `SUPABASE_URL` (mapeado para `NEXT_PUBLIC_SUPABASE_URL` no workflow)
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
-- `VIBRA_EMAIL_PASS` (senha de app Gmail — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
+- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — lido de variável de ambiente pelo script)
+- `VIBRA_EMAIL_PASS` (senha de app Gmail — lido de variável de ambiente pelo script)
 
 ## Migrations do Supabase (aplicacao manual)
 

@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   try {
-    const { stdout, stderr } = await execFileAsync(
+    const { stdout } = await execFileAsync(
       "npx",
       ["tsx", "scripts/vibra-capture.ts", ...args],
       {
@@ -57,19 +57,35 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
     );
 
+    // O script emite um resumo estruturado em JSON na última linha do stdout.
+    // Os logs de diagnóstico vão para stderr via logEtapa e nunca são expostos.
+    let resumo: {
+      postos_processados: number;
+      bases_com_sucesso: number;
+      bases_com_erro: number;
+      total_precos_extraidos: number;
+      erros_por_base: Record<string, string>;
+    } | null = null;
+
+    const ultimaLinha = stdout.trim().split("\n").pop();
+    if (ultimaLinha) {
+      try {
+        resumo = JSON.parse(ultimaLinha);
+      } catch {
+        // Se não conseguir fazer parse do JSON, ignora o resumo estruturado.
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Captura de preços da Vibra concluída.",
-      output: stdout,
-      stderr,
+      resumo,
     });
   } catch (err: any) {
     return NextResponse.json(
       {
         success: false,
-        error: err.message,
-        stderr: err.stderr,
-        stdout: err.stdout,
+        error: "Falha ao executar a captura de preços da Vibra.",
       },
       { status: 500 },
     );

@@ -152,22 +152,36 @@ export async function extractPrices(
   return results;
 }
 
+interface CaptureStats {
+  basesComSucesso: number;
+  basesComErro: number;
+  errosPorBase: Record<string, string>;
+}
+
+interface CaptureResult {
+  precos: VibraPreco[];
+  stats: CaptureStats;
+}
+
 async function captureForPosto(
   postoId: string,
   postoNome: string,
   postoAbrev: string,
-): Promise<VibraPreco[]> {
+): Promise<CaptureResult> {
   const rawLogin = await getParam("vibra", `vibra_${postoAbrev}_login`);
   const rawSenha = await getParam("vibra", `vibra_${postoAbrev}_senha`);
   const login = rawLogin ? decrypt(rawLogin) : null;
   const senha = rawSenha ? decrypt(rawSenha) : null;
+  const errosPorBase: Record<string, string> = {};
+  let basesComSucesso = 0;
+  let basesComErro = 0;
   if (!login || !senha) {
     await logEtapa(
       postoAbrev,
       "credenciais",
       `Credenciais não encontradas para ${postoAbrev}`,
     );
-    return [];
+    return { precos: [], stats: { basesComSucesso: 0, basesComErro: 0, errosPorBase } };
   }
 
   const browser = await chromium.launch({
@@ -262,7 +276,7 @@ async function captureForPosto(
         await logEtapa(
           postoAbrev,
           "2-login-sso",
-          `Código 2FA recebido: ${code}. Preenchendo campo OTP...`,
+          "Código 2FA recebido. Preenchendo campo OTP...",
         );
         const codeInput = await page.$('input[name="otp"], input#otp');
         if (codeInput) {
@@ -618,12 +632,16 @@ async function captureForPosto(
             `captura-${base}`,
             `Captura isolada da base ${base} concluída.`,
           );
+          basesComSucesso += 1;
         } catch (err) {
+          const msg = (err as Error).message;
           await logEtapa(
             postoAbrev,
             `captura-${base}`,
-            `ERRO: ${(err as Error).message}`,
+            `ERRO: ${msg}`,
           );
+          errosPorBase[base] = msg;
+          basesComErro += 1;
           await diagnosticarErro(`captura-${base}`, base);
           continue;
         }
@@ -638,14 +656,20 @@ async function captureForPosto(
       await browser.close();
     }
 
-    return precos;
+    return {
+      precos,
+      stats: { basesComSucesso, basesComErro, errosPorBase },
+    };
   } catch (err) {
     await logEtapa(
       postoAbrev,
       "captura-geral",
       `Erro na captura: ${(err as Error).message}`,
     );
-    return [];
+    return {
+      precos: [],
+      stats: { basesComSucesso, basesComErro, errosPorBase },
+    };
   }
 }
 async function main() {
@@ -713,12 +737,25 @@ async function main() {
       ? postos || []
       : (postos || []).filter((p) => p.abreviacao === postoFilter);
 
+    // Estatísticas agregadas para o resumo estruturado emitido ao final.
+    let postosProcessados = 0;
+    let totalBasesComSucesso = 0;
+    let totalBasesComErro = 0;
+    let totalPrecosExtraidos = 0;
+    const errosPorBaseAgregado: Record<string, string> = {};
+
     for (const posto of filteredPostos) {
-      const precos = await captureForPosto(
+      const { precos, stats } = await captureForPosto(
         posto.id,
         posto.nome,
         posto.abreviacao,
       );
+      postosProcessados += 1;
+      totalBasesComSucesso += stats.basesComSucesso;
+      totalBasesComErro += stats.basesComErro;
+      totalPrecosExtraidos += precos.length;
+      Object.assign(errosPorBaseAgregado, stats.errosPorBase);
+
       for (const p of precos) {
         // preço formatado abaixo no logEtapa ou removido
       }
@@ -791,6 +828,17 @@ async function main() {
         }
       }
     }
+
+    // Emite resumo estruturado em JSON para consumo do endpoint /api/capturar-vibra.
+    // Vai para stdout (console.log) para ser separado dos logs de diagnóstico (console.error via logEtapa).
+    const resumo = {
+      postos_processados,
+      bases_com_sucesso: totalBasesComSucesso,
+      bases_com_erro: totalBasesComErro,
+      total_precos_extraidos: totalPrecosExtraidos,
+      erros_por_base: errosPorBaseAgregado,
+    };
+    console.log(JSON.stringify(resumo));
 
     await logEtapa("SISTEMA", "concluido", "Concluído.");
   } catch (e) {
