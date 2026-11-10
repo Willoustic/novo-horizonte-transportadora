@@ -93,15 +93,35 @@ Comportamento do script `scripts/vibra-capture.ts`:
 - `--posto=ALL` ou vazio = todos os postos FILIAIS ativos (nao filtra por abreviacao "ALL").
 - `--posto=ABREV` = filtra por abreviacao do posto.
 - Loga preços capturados por posto e base.
-- Insere/atualiza `cotacoes` (fonte='vibra') e grava `historico_precos` (audit de alteracao de preco).
+- Insere/atualiza `cotacoes` (fonte='vibra') e grava `historico_precos` (audit de alteracao de preço).
+- **T2.2**: Verifica disponibilidade do Chromium antes de lançar o navegador. Falha com `process.exit(1)` se o binário não estiver instalado.
+- **T2.3**: Substitui `waitForTimeout` fixo por seletores robustos (`waitForSelector`, `waitForFunction`, `waitForLoadState`) com polling e timeout explícito.
+- **T2.4**: Retry com backoff exponencial (3 tentativas, base 2s) para login/2FA e simulação de preços.
+- **PNH2-ZN**: Portal da Vibra não renderiza tabela de preços para este posto. Log explícito "portal indisponível para este posto" e captura pulada.
 
 Segredos necessarios no repo GitHub (lista acima): `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `VIBRA_EMAIL_USER`, `VIBRA_EMAIL_PASS`. Configurar como secrets do GitHub Actions. Nao commitar credenciais.
 
 Producao: https://nh-transportadora.vercel.app (deploy automatico a cada push em `master`).
 
-> Limite do Vercel Free: serverless + Playwright/Chromium pode não funcionar em produção sem Chromium instalado. Validar a captura em ambiente com Chromium disponível antes de depender do endpoint direto.
+> Limite do Vercel Free: serverless + Playwright/Chromium pode não funcionar em produção sem Chromium instalado. O script `checkChromiumAvailable()` falha graciosamente com `process.exit(1)` e mensagem clara quando o binário está ausente. Validar a captura em ambiente com Chromium disponível (desenvolvimento local ou GitHub Actions que instala Chromium) antes de depender do endpoint direto.
 
-## Procedimentos locais (dev)
+### Execução local do vibra-capture
+
+O script requer o binário do Chromium instalado localmente:
+
+```powershell
+npx playwright install chromium
+```
+
+Depois, com `.env.local` preenchido:
+
+```powershell
+npm run vibra:capture
+# ou, para filtrar por um posto específico:
+npm run vibra:capture -- --posto=VIT
+```
+
+O resumo estruturado é emitido em JSON no `stdout` (via `console.log`), separado dos logs de diagnóstico no `stderr` (via `logEtapa`).
 
 1. `cp .env.example .env.local` e preencher valores reais (nenhum commita).
 2. `npm install`

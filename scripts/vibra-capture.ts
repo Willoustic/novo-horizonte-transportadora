@@ -35,6 +35,66 @@ const TIMEOUT_8S = 8000;
 const TIMEOUT_3S = 3000;
 const TIMEOUT_5S = 5000;
 const TIMEOUT_1_5S = 1500;
+
+// ============================================================================
+// T2.2 — Detecção de disponibilidade do Chromium
+// ============================================================================
+// Verifica se o binário do Chromium está instalado antes de lançar o navegador.
+// Falha graciosamente com mensagem clara quando não houver Chromium
+// (ex.: Vercel Free serverless, que não garante Chromium).
+async function checkChromiumAvailable(): Promise<void> {
+  try {
+    const executablePath = chromium.executablePath();
+    const { existsSync } = await import("fs");
+    if (!existsSync(executablePath)) {
+      throw new Error(`Binário do Chromium não encontrado em: ${executablePath}`);
+    }
+    await logEtapa("SISTEMA", "chromium-check", `Chromium disponível: ${executablePath}`);
+  } catch (e) {
+    const msg = (e as Error).message;
+    await logEtapa("SISTEMA", "chromium-check", `Chromium não disponível: ${msg}`);
+    console.error("ERRO: O binário do Chromium não está instalado neste ambiente.");
+    console.error("  - Desenvolvimento local: execute `npx playwright install chromium`");
+    console.error("  - Vercel Free (serverless): Chromium não é garantido. Use GitHub Actions que instala Chromium.");
+    process.exit(1);
+  }
+}
+
+// ============================================================================
+// T2.4 — Retry com backoff exponencial
+// ============================================================================
+// Executa uma função com retry (2-3 tentativas) e backoff exponencial.
+// Lança o último erro após esgotar as tentativas.
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  opts: {
+    maxAttempts?: number;
+    baseDelayMs?: number;
+    etapa?: string;
+    postoAbrev?: string;
+  } = {},
+): Promise<T> {
+  const { maxAttempts = 3, baseDelayMs = 2000, etapa = "retry", postoAbrev = "SISTEMA" } = opts;
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err as Error;
+      if (attempt < maxAttempts) {
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        await logEtapa(
+          postoAbrev,
+          etapa,
+          `Tentativa ${attempt}/${maxAttempts} falhou. Retentando em ${delay}ms... (${(err as Error).message})`,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError!;
+}
+
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
@@ -184,6 +244,24 @@ async function captureForPosto(
     return { precos: [], stats: { basesComSucesso: 0, basesComErro: 0, errosPorBase } };
   }
 
+  // T2.3: PNH2-ZN — portal da Vibra não renderiza tabela de preços.
+  // Problema de conta/portal Vibra, não de código. Log explícito e pula a captura.
+  if (postoAbrev === "PNH2-ZN") {
+    await logEtapa(
+      postoAbrev,
+      "portal-indisponível",
+      "portal indisponível para este posto (PNH2-ZN). Captura pulada.",
+    );
+    return {
+      precos: [],
+      stats: {
+        basesComSucesso: 0,
+        basesComErro: BASES.length,
+        errosPorBase: Object.fromEntries(BASES.map((b) => [b, "portal indisponível para este posto"])),
+      },
+    };
+  }
+
   const browser = await chromium.launch({
     headless: true,
     args: [
@@ -232,7 +310,16 @@ async function captureForPosto(
       "https://cn.vibraenergia.com.br/central-de-pedidos/#/vitrine?simulador=true",
       { waitUntil: "domcontentloaded", timeout: TIMEOUT_30S },
     );
-    await page.waitForTimeout(TIMEOUT_3S);
+    // T2.3: substitui waitForTimeout fixo por espera de rede ociosa
+    try {
+      await page.waitForLoadState("networkidle", { timeout: TIMEOUT_10S });
+    } catch {
+      await logEtapa(
+        postoAbrev,
+        "1-navegacao",
+        "networkidle não atingido no timeout; prosseguindo.",
+      );
+    }
     await logEtapa(postoAbrev, "1-navegacao", `URL atual: ${page.url()}`);
     await screenshotEtapa("1-navegacao");
 
@@ -251,18 +338,28 @@ async function captureForPosto(
         "Credenciais preenchidas. Clicando no botão loginBt...",
       );
       await page.click('input[name="loginBt"]');
-      await page.waitForTimeout(TIMEOUT_3S);
       await logEtapa(
         postoAbrev,
         "2-login-sso",
-        "Aguardando 20s para o campo 2FA aparecer (não aparece imediatamente)...",
+        "Aguardando campo 2FA aparecer (polling, timeout 20s)...",
       );
-      await page.waitForTimeout(TIMEOUT_20S);
-      await logEtapa(
-        postoAbrev,
-        "2-login-sso",
-        `URL após espera 2FA: ${page.url()}`,
-      );
+      // T2.3: substitui waitForTimeout fixo por waitForSelector com polling
+      try {
+        await page.waitForSelector('input[name="otp"], input#otp', {
+          timeout: TIMEOUT_20S,
+        });
+        await logEtapa(
+          postoAbrev,
+          "2-login-sso",
+          `Campo 2FA detectado. URL: ${page.url()}`,
+        );
+      } catch {
+        await logEtapa(
+          postoAbrev,
+          "2-login-sso",
+          "Campo 2FA não detectado dentro do timeout de 20s.",
+        );
+      }
       await screenshotEtapa("2-login-sso-apos-espera");
 
       const since = new Date(Date.now() - 300000);
@@ -282,14 +379,37 @@ async function captureForPosto(
         if (codeInput) {
           await codeInput.fill("");
           await codeInput.type(code, { delay: 100 });
-          await page.waitForTimeout(1000);
+          // T2.3: substitui waitForTimeout fixo por espera do botão de validação
+          try {
+            await page.waitForSelector('input[name="mfaValidate"]', {
+              timeout: TIMEOUT_5S,
+            });
+          } catch {
+            await logEtapa(
+              postoAbrev,
+              "2-login-sso",
+              "Botão mfaValidate não detectado no timeout de 5s.",
+            );
+          }
           await logEtapa(
             postoAbrev,
             "2-login-sso",
             "Clicando em mfaValidate para validar 2FA...",
           );
           await page.click('input[name="mfaValidate"]');
-          await page.waitForTimeout(TIMEOUT_10S);
+          // T2.3: substitui waitForTimeout fixo por espera de mudança de URL
+          try {
+            await page.waitForFunction(
+              () => !window.location.href.includes("/login"),
+              { timeout: TIMEOUT_10S },
+            );
+          } catch {
+            await logEtapa(
+              postoAbrev,
+              "2-login-sso",
+              "URL não mudou após validação 2FA no timeout de 10s.",
+            );
+          }
           await logEtapa(
             postoAbrev,
             "2-login-sso",
@@ -327,7 +447,15 @@ async function captureForPosto(
     const closeBtnInicial = await page.$('i.md-icons:has-text("close")');
     if (closeBtnInicial) {
       await closeBtnInicial.click({ force: true });
-      await page.waitForTimeout(2000);
+      // T2.3: substitui waitForTimeout fixo por espera de modal hidden
+      try {
+        await page.waitForSelector("mat-dialog-container", {
+          state: "hidden",
+          timeout: TIMEOUT_5S,
+        });
+      } catch {
+        // Modal pode já estar fechado; prossegue.
+      }
       await logEtapa(
         postoAbrev,
         "3-fechar-modal-inicial",
@@ -619,9 +747,26 @@ async function captureForPosto(
               timeout: 30000,
             },
           );
-          await page.waitForTimeout(TIMEOUT_3S);
+          // T2.3: substitui waitForTimeout fixo por espera de rede ociosa
+          try {
+            await page.waitForLoadState("networkidle", { timeout: TIMEOUT_10S });
+          } catch {
+            await logEtapa(
+              postoAbrev,
+              `captura-${base}`,
+              "networkidle não atingido no timeout; prosseguindo.",
+            );
+          }
           await closeModal();
-          await page.waitForTimeout(1000);
+          // T2.3: substitui waitForTimeout fixo por espera de modal hidden
+          try {
+            await page.waitForSelector("mat-dialog-container", {
+              state: "hidden",
+              timeout: TIMEOUT_5S,
+            });
+          } catch {
+            // Modal pode já estar fechado; prossegue.
+          }
 
           await selecionarBase(base);
           await simularPreços(base);
@@ -832,7 +977,7 @@ async function main() {
     // Emite resumo estruturado em JSON para consumo do endpoint /api/capturar-vibra.
     // Vai para stdout (console.log) para ser separado dos logs de diagnóstico (console.error via logEtapa).
     const resumo = {
-      postos_processados,
+      postos_processados: postosProcessados,
       bases_com_sucesso: totalBasesComSucesso,
       bases_com_erro: totalBasesComErro,
       total_precos_extraidos: totalPrecosExtraidos,
