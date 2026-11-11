@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles";
 
@@ -42,6 +43,33 @@ export async function GET(request: Request) {
   return NextResponse.json(cotacoes);
 }
 
+const cotacaoSchema = z.object({
+  posto_id: z.string().min(1, "posto obrigatório"),
+  combustivel_id: z.string().min(1, "combustível obrigatório"),
+  fornecedor_id: z.string().min(1, "fornecedor obrigatório"),
+  preco: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        const cleaned = val.replace(/\./g, "").replace(",", ".");
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? val : num;
+      }
+      return val;
+    },
+    z.number().positive("preço deve ser maior que zero"),
+  ),
+  fonte: z.string().optional(),
+  anexo_url: z.string().optional(),
+  base_id: z.string().optional(),
+  data_registro: z
+    .string()
+    .optional()
+    .refine(
+      (value) => value === undefined || !isNaN(Date.parse(value)),
+      "data inválida",
+    ),
+});
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -55,6 +83,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
   const body = await request.json();
+  const parsed = cotacaoSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Dados inválidos", issues: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
   const {
     posto_id,
     combustivel_id,
@@ -64,7 +99,7 @@ export async function POST(request: Request) {
     anexo_url,
     base_id,
     data_registro,
-  } = body;
+  } = parsed.data;
 
   const dataRegistro = data_registro
     ? new Date(data_registro).toISOString()

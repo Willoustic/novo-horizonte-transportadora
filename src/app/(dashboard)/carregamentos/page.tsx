@@ -9,6 +9,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Trash2, Plus } from "lucide-react";
 import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils";
 import { useCadastros } from "@/lib/use-cadastros";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 interface Carregamento {
   id: string;
@@ -44,6 +47,19 @@ const STATUS_COLORS: Record<string, string> = {
   cancelado: "bg-red-100 text-red-800",
 };
 
+const carregamentoSchema = z.object({
+  posto_destino_id: z.string().min(1, "Posto destino é obrigatório"),
+  motorista_id: z.string().min(1, "Motorista é obrigatório"),
+  cavalo_id: z.string().min(1, "Cavalo é obrigatório"),
+  tanque_carreta_id: z.string().min(1, "Tanque carreta é obrigatório"),
+  volume: z.coerce.number().positive("Volume deve ser maior que zero"),
+  base_id: z.string().optional(),
+  status: z.string().min(1, "Status é obrigatório"),
+  data: z.date({ required_error: "Data é obrigatória" }),
+});
+
+type CarregamentoFormData = z.infer<typeof carregamentoSchema>;
+
 export default function CarregamentosPage() {
   const [carregamentos, setCarregamentos] = useState<Carregamento[]>([]);
   const [motoristas, setMotoristas] = useState<any[]>([]);
@@ -54,15 +70,24 @@ export default function CarregamentosPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({
-    posto_destino_id: "",
-    motorista_id: "",
-    cavalo_id: "",
-    tanque_carreta_id: "",
-    volume: 0,
-    base_id: "",
-    status: "carregando",
-    data: new Date(),
+  const {
+    register,
+    control,
+    handleSubmit: handleRHFSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<CarregamentoFormData>({
+    resolver: zodResolver(carregamentoSchema),
+    defaultValues: {
+      posto_destino_id: "",
+      motorista_id: "",
+      cavalo_id: "",
+      tanque_carreta_id: "",
+      volume: 0,
+      base_id: "",
+      status: "carregando",
+      data: new Date(),
+    },
   });
 
   async function fetchData() {
@@ -119,15 +144,14 @@ export default function CarregamentosPage() {
     fetchData();
   }, [selectedDate]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleCreateCarregamento(values: CarregamentoFormData) {
     const res = await fetch("/api/carregamentos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
-        base_id: form.base_id || undefined,
-        data: formatDateToDB(form.data),
+        ...values,
+        base_id: values.base_id || undefined,
+        data: formatDateToDB(values.data),
       }),
     });
     if (!res.ok) {
@@ -137,8 +161,7 @@ export default function CarregamentosPage() {
       );
       return;
     }
-    setModalOpen(false);
-    setForm({
+    reset({
       posto_destino_id: "",
       motorista_id: "",
       cavalo_id: "",
@@ -148,6 +171,7 @@ export default function CarregamentosPage() {
       status: "carregando",
       data: new Date(),
     });
+    setModalOpen(false);
     await fetchData();
   }
 
@@ -191,7 +215,7 @@ export default function CarregamentosPage() {
         </div>
         <button
           onClick={() => {
-            setForm({
+            reset({
               posto_destino_id: "",
               motorista_id: "",
               cavalo_id: "",
@@ -325,19 +349,15 @@ export default function CarregamentosPage() {
                 ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleRHFSubmit(handleCreateCarregamento)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Posto Destino
                   </label>
                   <select
-                    value={form.posto_destino_id}
-                    onChange={(e) =>
-                      setForm({ ...form, posto_destino_id: e.target.value })
-                    }
+                    {...register("posto_destino_id")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    required
                   >
                     <option value="">Selecione...</option>
                     {postos.map((p) => (
@@ -346,27 +366,39 @@ export default function CarregamentosPage() {
                       </option>
                     ))}
                   </select>
+                  {errors.posto_destino_id && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.posto_destino_id.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Data do Carregamento
                   </label>
-                  <DatePicker
-                    date={form.data}
-                    onChange={(d) => setForm({ ...form, data: d })}
+                  <Controller
+                    control={control}
+                    name="data"
+                    render={({ field }: { field: any }) => (
+                      <DatePicker
+                        date={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
+                  {errors.data && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.data.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Motorista
                   </label>
                   <select
-                    value={form.motorista_id}
-                    onChange={(e) =>
-                      setForm({ ...form, motorista_id: e.target.value })
-                    }
+                    {...register("motorista_id")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    required
                   >
                     <option value="">Selecione...</option>
                     {motoristas.map((m) => (
@@ -375,18 +407,19 @@ export default function CarregamentosPage() {
                       </option>
                     ))}
                   </select>
+                  {errors.motorista_id && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.motorista_id.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Cavalo
                   </label>
                   <select
-                    value={form.cavalo_id}
-                    onChange={(e) =>
-                      setForm({ ...form, cavalo_id: e.target.value })
-                    }
+                    {...register("cavalo_id")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    required
                   >
                     <option value="">Selecione...</option>
                     {cavalos.map((c) => (
@@ -395,18 +428,19 @@ export default function CarregamentosPage() {
                       </option>
                     ))}
                   </select>
+                  {errors.cavalo_id && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.cavalo_id.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Tanque Carreta
                   </label>
                   <select
-                    value={form.tanque_carreta_id}
-                    onChange={(e) =>
-                      setForm({ ...form, tanque_carreta_id: e.target.value })
-                    }
+                    {...register("tanque_carreta_id")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    required
                   >
                     <option value="">Selecione...</option>
                     {tanquesCarreta.map((t) => (
@@ -415,6 +449,11 @@ export default function CarregamentosPage() {
                       </option>
                     ))}
                   </select>
+                  {errors.tanque_carreta_id && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.tanque_carreta_id.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
@@ -422,23 +461,21 @@ export default function CarregamentosPage() {
                   </label>
                   <input
                     type="number"
-                    value={form.volume}
-                    onChange={(e) =>
-                      setForm({ ...form, volume: parseFloat(e.target.value) || 0 })
-                    }
+                    {...register("volume")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    required
                   />
+                  {errors.volume && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.volume.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Base Origem
                   </label>
                   <select
-                    value={form.base_id}
-                    onChange={(e) =>
-                      setForm({ ...form, base_id: e.target.value })
-                    }
+                    {...register("base_id")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
                     <option value="">Selecione...</option>

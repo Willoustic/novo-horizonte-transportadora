@@ -20,6 +20,8 @@ Nunca commitar valores reais. `.env*` esta no `.gitignore`. Copie `.env.example`
 | SUPABASE_SERVICE_ROLE_KEY     | Supabase Dashboard > Settings > API                                        | **Segredo.** Server-side only (scripts e rota /api/capturar-vibra) |
 | ENCRYPTION_KEY                | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | AES-256-GCM, 64 hex chars. Obrigatório para descriptografar credenciais da Vibra. |
 | NEXT_PUBLIC_APP_URL           | http://localhost:3000 (dev)                                                | Base URL da app                         |
+| VIBRA_EMAIL_USER              | Segredo do e-mail Gmail (IMAP)                                             | Usado pelo script de captura para 2FA   |
+| VIBRA_EMAIL_PASS              | Segredo da senha de app Gmail                                              | Usado pelo script de captura para 2FA   |
 | GITHUB_TOKEN                  | GitHub > Settings > Developer settings > Personal access tokens            | PAT com acesso a Actions (repo)         |
 | GITHUB_REPO_OWNER             | Willoustic                                                                 | Dono do repo                            |
 | GITHUB_REPO_NAME              | novo-horizonte-transportadora                                              | Nome do repo                            |
@@ -46,8 +48,8 @@ Usados pelo workflow `.github/workflows/vibra-capture.yml`:
 - `ENCRYPTION_KEY`
 - `SUPABASE_URL` (mapeado para `NEXT_PUBLIC_SUPABASE_URL` no workflow)
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
-- `VIBRA_EMAIL_PASS` (senha de app Gmail — **atualmente hardcoded em scripts/vibra-capture.ts, mover para secret**)
+- `VIBRA_EMAIL_USER` (usuario Gmail IMAP — lido de variável de ambiente pelo script)
+- `VIBRA_EMAIL_PASS` (senha de app Gmail — lido de variável de ambiente pelo script)
 
 ## Migrations do Supabase (aplicacao manual)
 
@@ -91,15 +93,35 @@ Comportamento do script `scripts/vibra-capture.ts`:
 - `--posto=ALL` ou vazio = todos os postos FILIAIS ativos (nao filtra por abreviacao "ALL").
 - `--posto=ABREV` = filtra por abreviacao do posto.
 - Loga preços capturados por posto e base.
-- Insere/atualiza `cotacoes` (fonte='vibra') e grava `historico_precos` (audit de alteracao de preco).
+- Insere/atualiza `cotacoes` (fonte='vibra') e grava `historico_precos` (audit de alteracao de preço).
+- **T2.2**: Verifica disponibilidade do Chromium antes de lançar o navegador. Falha com `process.exit(1)` se o binário não estiver instalado.
+- **T2.3**: Substitui `waitForTimeout` fixo por seletores robustos (`waitForSelector`, `waitForFunction`, `waitForLoadState`) com polling e timeout explícito.
+- **T2.4**: Retry com backoff exponencial (3 tentativas, base 2s) para login/2FA e simulação de preços.
+- **PNH2-ZN**: Portal da Vibra não renderiza tabela de preços para este posto. Log explícito "portal indisponível para este posto" e captura pulada.
 
 Segredos necessarios no repo GitHub (lista acima): `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`, `VIBRA_EMAIL_USER`, `VIBRA_EMAIL_PASS`. Configurar como secrets do GitHub Actions. Nao commitar credenciais.
 
 Producao: https://nh-transportadora.vercel.app (deploy automatico a cada push em `master`).
 
-> Limite do Vercel Free: serverless + Playwright/Chromium pode não funcionar em produção sem Chromium instalado. Validar a captura em ambiente com Chromium disponível antes de depender do endpoint direto.
+> Limite do Vercel Free: serverless + Playwright/Chromium pode não funcionar em produção sem Chromium instalado. O script `checkChromiumAvailable()` falha graciosamente com `process.exit(1)` e mensagem clara quando o binário está ausente. Validar a captura em ambiente com Chromium disponível (desenvolvimento local ou GitHub Actions que instala Chromium) antes de depender do endpoint direto.
 
-## Procedimentos locais (dev)
+### Execução local do vibra-capture
+
+O script requer o binário do Chromium instalado localmente:
+
+```powershell
+npx playwright install chromium
+```
+
+Depois, com `.env.local` preenchido:
+
+```powershell
+npm run vibra:capture
+# ou, para filtrar por um posto específico:
+npm run vibra:capture -- --posto=VIT
+```
+
+O resumo estruturado é emitido em JSON no `stdout` (via `console.log`), separado dos logs de diagnóstico no `stderr` (via `logEtapa`).
 
 1. `cp .env.example .env.local` e preencher valores reais (nenhum commita).
 2. `npm install`

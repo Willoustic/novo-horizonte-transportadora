@@ -62,7 +62,7 @@ export function useCadastros(date: Date) {
         combJson.length > 0 &&
         fornJson.length > 0 &&
         basesJson.length > 0;
-      setLoading(!allOk);
+      setLoading(false);
     }
 
     fetchData();

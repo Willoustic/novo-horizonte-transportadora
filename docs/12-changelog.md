@@ -1,5 +1,21 @@
 # 12 - Changelog
 
+## [0.1.5] - 2026-11-11
+
+### Adicionado
+
+- Exportação Excel (XLSX) 100% client-side no dashboard: botão "Exportar Excel" em cada um dos 4 cards (Litragem Pedidos, Carregamento Motorista, Estoque Filial, Melhor Preço Posto)
+- Componente `ExportarExcelButton` em `src/components/dashboard/exportar-excel-button.tsx`
+- Serviço `exportarExcel` em `src/services/exportar-excel.service.ts` (biblioteca `xlsx` v0.18.5)
+- Cada botão exporta apenas os dados do seu card; perfis `admin`/`padrao` operam, perfil `restrito` não exibe o botão
+- Cores verde `#16a34a` e amarelo `#eab308` (shadcn/ui Button + ícone Download lucide-react)
+- Feedback visual via `useState` + `setTimeout` (sucesso/erro)
+- Testes vitest: 35/35 passando (8 unitários botão + 9 unitários serviço + 5 integração ponta-a-ponta); `tsc --noEmit` sem erros; `npm run build` com sucesso
+
+### Implantação
+
+- Branch `feature/exportacao-xlsx-dashboard`; PR para master; merge e deploy na Vercel (https://nh-transportadora.vercel.app)
+
 ## [0.1.4] - 2026-11-05
 
 ### Adicionado

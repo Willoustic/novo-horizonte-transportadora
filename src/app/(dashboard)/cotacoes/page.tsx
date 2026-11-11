@@ -327,7 +327,7 @@ export default function CotacoesPage() {
             ] as ColumnDef<any, any>[]
           }
           data={cotacoes}
-          loading={false}
+          loading={loading}
           emptyMessage={`Não há cotações para o dia ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}`}
         />
       )}

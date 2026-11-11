@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles";
+
+const cotacaoUpdateSchema = z.object({
+  preco: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        const cleaned = val.replace(/\./g, "").replace(",", ".");
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? val : num;
+      }
+      return val;
+    },
+    z.number().positive("preço deve ser maior que zero").optional(),
+  ),
+  fonte: z.string().optional(),
+  anexo_url: z.string().optional(),
+  base_id: z.string().optional(),
+  data_registro: z
+    .string()
+    .optional()
+    .refine(
+      (value) => value === undefined || !isNaN(Date.parse(value)),
+      "data inválida",
+    ),
+  base: z.string().optional(),
+});
 
 export async function GET(
   request: Request,
@@ -52,19 +78,22 @@ export async function PUT(
   }
   const { id } = await params;
   const body = await request.json();
-
-  const allowedFields = [
-    "preco",
-    "fonte",
-    "anexo_url",
-    "base_id",
-    "data_registro",
-  ];
-  const updateData: Record<string, unknown> = {};
-  for (const field of allowedFields) {
-    if (field in body) updateData[field] = body[field];
+  const parsed = cotacaoUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Dados inválidos", issues: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
   }
-  if (body.base !== undefined) {
+  const { preco, fonte, anexo_url, base_id, data_registro, base } = parsed.data;
+
+  const updateData: Record<string, unknown> = {};
+  if (preco !== undefined) updateData.preco = preco;
+  if (fonte !== undefined) updateData.fonte = fonte;
+  if (anexo_url !== undefined) updateData.anexo_url = anexo_url;
+  if (base_id !== undefined) updateData.base_id = base_id;
+  if (data_registro !== undefined) updateData.data_registro = data_registro;
+  if (base !== undefined) {
     const { data: baseRes } = await supabase
       .from("bases")
       .select("id")

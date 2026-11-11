@@ -6,6 +6,9 @@ import { ptBR } from "date-fns/locale";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateToDB, formatDateFromDB } from "@/lib/date-utils";
 import { useCadastros } from "@/lib/use-cadastros";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Trash2,
   Plus,
@@ -66,6 +69,23 @@ const STATUS_COLORS: Record<string, string> = {
   cancelado: "bg-red-100 text-red-800",
 };
 
+const pedidoItemSchema = z.object({
+  combustivel_id: z.string().min(1, "Combustível é obrigatório"),
+  quantidade_litros: z.coerce.number().positive("Quantidade deve ser maior que zero"),
+  fornecedor_id: z.string().min(1, "Fornecedor é obrigatório"),
+  base_id: z.string().min(1, "Base é obrigatória"),
+  preco_unitario: z.coerce.number().nonnegative("Preço unitário deve ser maior ou igual a zero"),
+});
+
+const pedidoFormSchema = z.object({
+  posto_id: z.string().min(1, "Posto é obrigatório"),
+  observacoes: z.string().optional(),
+  data: z.date({ required_error: "Data é obrigatória" }),
+  itens: z.array(pedidoItemSchema).min(1, "Adicione pelo menos um item"),
+});
+
+type PedidoFormData = z.infer<typeof pedidoFormSchema>;
+
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [postos, setPostos] = useState<Posto[]>([]);
@@ -81,12 +101,28 @@ export default function PedidosPage() {
     bases: cadastrosBases,
   } = useCadastros(selectedDate);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({
-    posto_id: "",
-    observacoes: "",
-    data: new Date(),
-    itens: [] as ItemPedido[],
+  const {
+    register,
+    control,
+    handleSubmit: handleRHFSubmit,
+    formState: { errors },
+    reset,
+    setValue,
+  } = useForm<PedidoFormData>({
+    resolver: zodResolver(pedidoFormSchema),
+    defaultValues: {
+      posto_id: "",
+      observacoes: "",
+      data: new Date(),
+      itens: [],
+    },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "itens",
+  });
+
   const [newItem, setNewItem] = useState({
     combustivel_id: "",
     quantidade_litros: 0,
@@ -129,10 +165,17 @@ export default function PedidosPage() {
       !newItem.fornecedor_id ||
       !newItem.base_id ||
       !newItem.quantidade_litros ||
-      newItem.quantidade_litros <= 0
+      newItem.quantidade_litros <= 0 ||
+      isNaN(newItem.quantidade_litros)
     )
       return;
-    setForm({ ...form, itens: [...form.itens, { ...newItem }] });
+    append({
+      combustivel_id: newItem.combustivel_id,
+      quantidade_litros: newItem.quantidade_litros,
+      fornecedor_id: newItem.fornecedor_id,
+      base_id: newItem.base_id,
+      preco_unitario: newItem.preco_unitario,
+    });
     setNewItem({
       combustivel_id: "",
       quantidade_litros: 0,
@@ -143,21 +186,15 @@ export default function PedidosPage() {
   }
 
   function removeItem(idx: number) {
-    setForm({ ...form, itens: form.itens.filter((_, i) => i !== idx) });
+    remove(idx);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (form.itens.length === 0) {
-      alert("Adicione pelo menos um item");
-      return;
-    }
-
+  async function handleSubmit(values: PedidoFormData) {
     const payload = {
-      posto_id: form.posto_id,
-      observacoes: form.observacoes,
-      data: formatDateToDB(form.data),
-      itens: form.itens,
+      posto_id: values.posto_id,
+      observacoes: values.observacoes,
+      data: formatDateToDB(values.data),
+      itens: values.itens,
     };
 
     const res = await fetch("/api/pedidos", {
@@ -172,8 +209,13 @@ export default function PedidosPage() {
       return;
     }
 
+    reset({
+      posto_id: "",
+      observacoes: "",
+      data: new Date(),
+      itens: [],
+    });
     setModalOpen(false);
-    setForm({ posto_id: "", observacoes: "", data: new Date(), itens: [] });
     await fetchData();
   }
 
@@ -213,7 +255,7 @@ export default function PedidosPage() {
         </div>
         <button
           onClick={() => {
-            setForm({
+            reset({
               posto_id: "",
               observacoes: "",
               data: new Date(),
@@ -358,19 +400,15 @@ export default function PedidosPage() {
                 ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleRHFSubmit(handleSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Posto
                   </label>
                   <select
-                    value={form.posto_id}
-                    onChange={(e) =>
-                      setForm({ ...form, posto_id: e.target.value })
-                    }
+                    {...register("posto_id")}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                    required
                   >
                     <option value="">Selecione...</option>
                     {postos.map((p) => (
@@ -379,15 +417,28 @@ export default function PedidosPage() {
                       </option>
                     ))}
                   </select>
+                  {errors.posto_id && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.posto_id.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Data do Pedido
                   </label>
-                  <DatePicker
-                    date={form.data}
-                    onChange={(d) => setForm({ ...form, data: d })}
+                  <Controller
+                    control={control}
+                    name="data"
+                    render={({ field }: { field: any }) => (
+                      <DatePicker date={field.value} onChange={field.onChange} />
+                    )}
                   />
+                  {errors.data && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.data.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -403,7 +454,7 @@ export default function PedidosPage() {
                     }
                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   >
-                    <option value="">Combustivel</option>
+                    <option value="">Combustível</option>
                     {combustiveis.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.abreviacao}
@@ -453,7 +504,7 @@ export default function PedidosPage() {
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="Preco Unit."
+                    placeholder="Preço Unit."
                     value={newItem.preco_unitario || ""}
                     onChange={(e) =>
                       setNewItem({
@@ -472,27 +523,28 @@ export default function PedidosPage() {
                   + Adicionar Item
                 </button>
 
-                {form.itens.length > 0 && (
+                {fields.length > 0 && (
                   <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr className="text-gray-500 dark:text-gray-400 text-left">
-                          <th className="px-3 py-2 font-medium">Combustivel</th>
+                          <th className="px-3 py-2 font-medium">Combustível</th>
                           <th className="px-3 py-2 font-medium">Fornecedor</th>
                           <th className="px-3 py-2 font-medium">Base</th>
                           <th className="px-3 py-2 text-right font-medium">
                             Qtd
                           </th>
                           <th className="px-3 py-2 text-right font-medium">
-                            Preco
+                            Preço
                           </th>
                           <th className="px-3 py-2 text-right font-medium">
-                            Acao
+                            Ação
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {form.itens.map((item, idx) => {
+                        {fields.map((field, idx) => {
+                          const item = field as any;
                           const comb = combustiveis.find(
                             (c) => c.id === item.combustivel_id,
                           );
@@ -501,7 +553,7 @@ export default function PedidosPage() {
                           );
                           return (
                             <tr
-                              key={idx}
+                              key={field.id}
                               className="hover:bg-gray-50 dark:bg-gray-800"
                             >
                               <td className="px-3 py-2">{comb?.abreviacao}</td>
@@ -532,6 +584,11 @@ export default function PedidosPage() {
                     </table>
                   </div>
                 )}
+                {errors.itens && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.itens.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -539,10 +596,7 @@ export default function PedidosPage() {
                   Observações
                 </label>
                 <textarea
-                  value={form.observacoes}
-                  onChange={(e) =>
-                    setForm({ ...form, observacoes: e.target.value })
-                  }
+                  {...register("observacoes")}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   rows={2}
                 />

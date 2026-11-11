@@ -111,3 +111,17 @@ Vibra, Setta, Larco, Petrovia
 - Testar `/api/capturar-vibra` a partir do portal (botão "Capturar Vibra" já conectado ao novo endpoint).
 - Limitação conhecida: Vercel serverless + Playwright/Chromium pode não rodar em produção; validar captura em ambiente com Chromium instalado.
 - PNH2-ZN Vibra capture: portal não renderiza tabela de preços (problema de conta/portal Vibra, não de código).
+
+## Fase 2 — Script vibra-capture (T2.x)
+
+### Concluído
+
+- **T2.2 — Detecção de Chromium**: `checkChromiumAvailable()` verifica `chromium.executablePath()` com `existsSync` antes de `chromium.launch()`. Falha com `process.exit(1)` e mensagem clara se o binário não estiver disponível (Vercel Free serverless não garante Chromium).
+- **T2.3 — Substituição de waitForTimeout**: Os 8 `page.waitForTimeout()` fixos foram substituídos por `waitForLoadState("networkidle")`, `waitForSelector` com polling, `waitForFunction` e espera de `mat-dialog-container` com `state: "hidden"`. Cada espera tem timeout explícito e try/catch para não travar o fluxo.
+- **T2.4 — Retry com backoff**: `retryWithBackoff()` implementado com 3 tentativas, backoff exponencial (base 2s) e log de cada tentativa via `logEtapa`.
+- **T2.7 — Validação local de execução**: Chromium instalado via `npx playwright install chromium`. Script executado localmente com sucesso (resumo JSON emitido via `console.log`). Correção de bug: `postos_processados` mapeado corretamente para a variável `postosProcessados` no resumo de saída.
+
+### Pendente
+
+- Configurar variáveis de ambiente reais (`.env.local`) para execução completa com credenciais da Vibra.
+- Testar endpoint `/api/capturar-vibra` em produção (requer Chromium no ambiente de execução — não disponível no Vercel Free).
