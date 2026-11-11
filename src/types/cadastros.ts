@@ -66,6 +66,10 @@ export interface Base {
   id: string;
   nome: string;
   abreviacao: string;
+  uf: string | null;
+  cidade: string | null;
+  fornecedor_id: string | null;
+  fornecedor?: Fornecedor;
   ativo: boolean;
   created_at: string;
 }

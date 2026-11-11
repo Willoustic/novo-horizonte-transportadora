@@ -8,6 +8,7 @@ const cadastros = [
   { href: "/cadastros/cavalos", label: "Cavalos" },
   { href: "/cadastros/tanques-carreta", label: "Tanques de Carreta" },
   { href: "/cadastros/tanques-posto", label: "Tanques de Posto" },
+  { href: "/cadastros/bases", label: "Bases" },
 ];
 
 export default function CadastrosPage() {

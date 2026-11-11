@@ -6,6 +6,9 @@ import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles";
 const baseSchema = z.object({
   nome: z.string().min(1, "nome obrigatório"),
   abreviacao: z.string().min(1, "abreviação obrigatória"),
+  uf: z.string().min(1, "UF obrigatória"),
+  cidade: z.string().min(1, "cidade obrigatória"),
+  fornecedor_id: z.string().uuid().optional().nullable(),
 });
 
 export async function GET() {
