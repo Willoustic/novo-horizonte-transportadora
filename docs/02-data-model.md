@@ -10,6 +10,8 @@ Cavalo: id, placa, modelo, ano, ativo
 TanqueCarreta: id, identificacao, capacidade_litros (decimal), ativo
 TanquePosto: id, posto_id (FK), numero (int), combustivel_id (FK), capacidade_litros (decimal), estoque_minimo (decimal), ativo
 Usuario: id, nome, email (unique), senha_hash, perfil (admin/padrao/restrito), ativo, created_at
+Base: id, nome, abreviacao, uf, cidade, fornecedor_id (FK fornecedores), ativo, created_at
+  - Tabela criada na migracao 009; estendida na migracao 013 (campos uf, cidade, fornecedor_id, ativo, created_at).
 
 ## Operacao
 
@@ -36,3 +38,4 @@ Parametro: id, grupo (vibra/gmail/whatsapp/geral), chave, valor (text, criptogra
 - admin: acesso total
 - padrao: acesso a operacao
 - restrito: sem acesso
+- Base: admin/padrao SELECT/INSERT/UPDATE; apenas admin DELETE (soft-delete via ativo=false); restrito sem acesso.

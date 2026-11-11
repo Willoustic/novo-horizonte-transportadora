@@ -1,5 +1,17 @@
 # 12 - Changelog
 
+## [0.1.6] - 2026-11-11
+
+### Adicionado
+
+- Cadastro de Bases na rota `/cadastros`: campos Nome, Abreviacao, UF, Cidade, Fornecedor
+- Validacao server-side com Zod nas API routes de bases
+- Soft-delete via `ativo=false` (exclusao logica)
+- Perfis de acesso: admin/padrao operam, perfil restrito sem acesso
+- Pagina em `src/app/(dashboard)/cadastros/bases/page.tsx`
+- API em `src/app/api/cadastros/bases/`
+- Migration 013 (extensao da tabela `bases`, criada na migracao 009)
+
 ## [0.1.5] - 2026-11-11
 
 ### Adicionado
