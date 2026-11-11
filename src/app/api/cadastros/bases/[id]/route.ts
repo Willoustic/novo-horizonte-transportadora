@@ -91,7 +91,7 @@ export async function DELETE(
   }
   const { error } = await supabase
     .from("bases")
-    .update({ ativo: false })
+    .delete()
     .eq("id", id);
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });

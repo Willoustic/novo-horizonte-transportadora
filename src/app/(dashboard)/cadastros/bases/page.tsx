@@ -10,6 +10,7 @@ interface Base {
   uf: string | null;
   cidade: string | null;
   fornecedor_id: string | null;
+  fornecedor?: { nome: string | null } | null;
   ativo: boolean;
 }
 
@@ -72,7 +73,7 @@ export default function BasesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Deseja desativar esta base?")) return;
+    if (!confirm("Deseja excluir esta base?")) return;
     await fetch(`/api/cadastros/bases/${id}`, { method: "DELETE" });
     fetchData();
   }
@@ -98,6 +99,7 @@ export default function BasesPage() {
           { key: "abreviacao", label: "Abreviacao" },
           { key: "uf", label: "UF" },
           { key: "cidade", label: "Cidade" },
+          { key: "fornecedor", label: "Fornecedor", render: (v) => v?.nome ?? "-" },
           { key: "ativo", label: "Ativo", render: (v) => (v ? "Sim" : "Nao") },
         ]}
         data={data}

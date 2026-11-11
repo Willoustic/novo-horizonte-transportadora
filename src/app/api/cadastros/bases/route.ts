@@ -25,7 +25,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("bases")
-    .select("*")
+    .select("*, fornecedor:fornecedores(nome)")
     .order("nome");
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
