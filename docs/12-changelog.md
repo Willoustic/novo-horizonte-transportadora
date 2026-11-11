@@ -6,7 +6,7 @@
 
 - Cadastro de Bases na rota `/cadastros`: campos Nome, Abreviacao, UF, Cidade, Fornecedor
 - Validacao server-side com Zod nas API routes de bases
-- Soft-delete via `ativo=false` (exclusao logica)
+- Exclusao fisica via DELETE (sem soft-delete); FK fk_cotacoes_base com ON DELETE SET NULL (migracao 014)
 - Perfis de acesso: admin/padrao operam, perfil restrito sem acesso
 - Pagina em `src/app/(dashboard)/cadastros/bases/page.tsx`
 - API em `src/app/api/cadastros/bases/`

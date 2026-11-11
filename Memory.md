@@ -29,7 +29,7 @@ Hospedagem: Gratuita (Vercel Free + Supabase Free)
 ### Módulos e Funcionalidades
 
 - [04-modules.md](docs/04-modules.md) — Descrição de cada módulo
-- Cadastro de Bases — tela e API de cadastro de bases (nome, abreviacao, UF, cidade, fornecedor, soft-delete via ativo=false)
+- Cadastro de Bases — tela e API de cadastro de bases (nome, abreviacao, UF, cidade, fornecedor; exclusao fisica via DELETE, coluna fornecedor na listagem, migracao 014 com FK ON DELETE SET NULL)
 - [09-parameters.md](docs/09-parameters.md) — Tela de Parâmetros
 - [10-pricing-rules.md](docs/10-pricing-rules.md) — Regras de preços e comparação
 - [13-ui-guidelines.md](docs/13-ui-guidelines.md) — Guia de UI (cores, componentes)

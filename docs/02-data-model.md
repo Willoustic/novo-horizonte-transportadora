@@ -12,6 +12,7 @@ TanquePosto: id, posto_id (FK), numero (int), combustivel_id (FK), capacidade_li
 Usuario: id, nome, email (unique), senha_hash, perfil (admin/padrao/restrito), ativo, created_at
 Base: id, nome, abreviacao, uf, cidade, fornecedor_id (FK fornecedores), ativo, created_at
   - Tabela criada na migracao 009; estendida na migracao 013 (campos uf, cidade, fornecedor_id, ativo, created_at).
+  - Migracao 014 altera FK fk_cotacoes_base para ON DELETE SET NULL, permitindo DELETE fisico em bases sem bloqueio por cotacoes.
 
 ## Operacao
 
@@ -38,4 +39,4 @@ Parametro: id, grupo (vibra/gmail/whatsapp/geral), chave, valor (text, criptogra
 - admin: acesso total
 - padrao: acesso a operacao
 - restrito: sem acesso
-- Base: admin/padrao SELECT/INSERT/UPDATE; apenas admin DELETE (soft-delete via ativo=false); restrito sem acesso.
+- Base: admin/padrao SELECT/INSERT/UPDATE; apenas admin DELETE (exclusao fisica); restrito sem acesso.
