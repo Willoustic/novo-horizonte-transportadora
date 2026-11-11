@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPerfil, temAcessoDashboard } from "@/lib/supabase/profiles";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { PerfilProvider } from "@/components/layout/perfil-provider";
 
 export default async function DashboardLayout({
   children,
@@ -30,9 +31,11 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800">
       <Sidebar perfil={perfilAcesso} />
-      <main className="md:ml-64 pt-16 md:pt-6 p-4 md:p-6 min-h-screen">
-        {children}
-      </main>
+      <PerfilProvider initialPerfil={perfilAcesso}>
+        <main className="md:ml-64 pt-16 md:pt-6 p-4 md:p-6 min-h-screen">
+          {children}
+        </main>
+      </PerfilProvider>
     </div>
   );
 }

@@ -17,6 +17,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { formatDateToDB } from "@/lib/date-utils";
 import { DataTable } from "@/components/shared/DataTable";
 import { useFetchData } from "@/components/shared/use-fetch-data";
+import { ExportarExcelButton } from "@/components/dashboard/exportar-excel-button";
+import { usePerfil } from "@/components/layout/perfil-provider";
 
 interface LitragemRow {
   posto: string;
@@ -70,6 +72,8 @@ export default function DashboardPage() {
 
   const loading =
     pedidosLoading || carregLoading || estoqueLoading || cotacoesLoading;
+
+  const perfil = usePerfil();
 
   // --- Litragem: pedidos itens agrupados por posto x combustível, bases via carregamentos ---
   const litragem = useMemo<LitragemRow[]>(() => {
@@ -283,11 +287,24 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Card 1: Litragem de pedidos por posto x combustível */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Fuel className="h-5 w-5 text-blue-600" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">
-                Litragem de Pedidos por Posto
-              </h2>
+            <div className="flex items-center gap-2 justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Fuel className="h-5 w-5 text-blue-600" />
+                <h2 className="font-semibold text-gray-800 dark:text-white">
+                  Litragem de Pedidos por Posto
+                </h2>
+              </div>
+              <ExportarExcelButton
+                data={litragem}
+                fileName="litragem-pedidos"
+                perfil={perfil}
+                headers={{
+                  posto: "Posto",
+                  combustivel: "Combustível",
+                  bases: "Bases",
+                  total: "Litros",
+                }}
+              />
             </div>
             <DataTable
               columns={litragemColumns}
@@ -299,11 +316,24 @@ export default function DashboardPage() {
 
           {/* Card 2: Carregamento por motorista */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Truck className="h-5 w-5 text-orange-600" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">
-                Carregamento por Motorista
-              </h2>
+            <div className="flex items-center gap-2 justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-orange-600" />
+                <h2 className="font-semibold text-gray-800 dark:text-white">
+                  Carregamento por Motorista
+                </h2>
+              </div>
+              <ExportarExcelButton
+                data={carreg}
+                fileName="carregamento-motorista"
+                perfil={perfil}
+                headers={{
+                  motorista: "Motorista",
+                  cavalo: "Cavalo",
+                  tanque: "Tanque",
+                  total: "Litros",
+                }}
+              />
             </div>
             <DataTable
               columns={carregColumns}
@@ -315,11 +345,23 @@ export default function DashboardPage() {
 
           {/* Card 3: Estoque por filial */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Package className="h-5 w-5 text-green-600" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">
-                Estoque por Filial
-              </h2>
+            <div className="flex items-center gap-2 justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-green-600" />
+                <h2 className="font-semibold text-gray-800 dark:text-white">
+                  Estoque por Filial
+                </h2>
+              </div>
+              <ExportarExcelButton
+                data={estoque}
+                fileName="estoque-filial"
+                perfil={perfil}
+                headers={{
+                  posto: "Posto",
+                  combustivel: "Combustível",
+                  volume: "Volume",
+                }}
+              />
             </div>
             <DataTable
               columns={estoqueColumns}
@@ -331,11 +373,24 @@ export default function DashboardPage() {
 
           {/* Card 4: Melhor preço por posto x produto */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <DollarSign className="h-5 w-5 text-yellow-600" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">
-                Melhor Preço por Posto
-              </h2>
+            <div className="flex items-center gap-2 justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-yellow-600" />
+                <h2 className="font-semibold text-gray-800 dark:text-white">
+                  Melhor Preço por Posto
+                </h2>
+              </div>
+              <ExportarExcelButton
+                data={precos}
+                fileName="melhor-preco-posto"
+                perfil={perfil}
+                headers={{
+                  posto: "Posto",
+                  combustivel: "Combustível",
+                  base: "Base",
+                  preco: "Preço",
+                }}
+              />
             </div>
             <DataTable
               columns={precosColumns}
