@@ -19,29 +19,83 @@ import { DataTable } from "@/components/shared/DataTable";
 import { useFetchData } from "@/components/shared/use-fetch-data";
 import { ExportarExcelButton } from "@/components/dashboard/exportar-excel-button";
 import { usePerfil } from "@/components/layout/perfil-provider";
+import type { Row } from "@tanstack/react-table";
 
 interface LitragemRow {
   posto: string;
   combustivel: string;
   bases: string;
   total: number;
+  [key: string]: unknown;
 }
 interface CarregRow {
   motorista: string;
   cavalo: string;
   tanque: string;
   total: number;
+  [key: string]: unknown;
 }
 interface EstoqueRow {
   posto: string;
   combustivel: string;
   volume: number;
+  [key: string]: unknown;
 }
 interface PrecoRow {
   posto: string;
   combustivel: string;
   base: string;
   preco: number;
+  [key: string]: unknown;
+}
+
+interface PostoResumo {
+  abreviacao?: string;
+  nome?: string;
+  tipo?: "FILIAL" | "CLIENTE";
+}
+
+interface CombustivelResumo {
+  abreviacao?: string;
+  nome?: string;
+}
+
+interface PedidoItem {
+  combustivel?: CombustivelResumo;
+  volume_solicitado?: number;
+}
+
+interface Pedido {
+  id: string | number;
+  posto?: PostoResumo;
+  itens?: PedidoItem[];
+}
+
+interface Carregamento {
+  pedido_id?: string | number;
+  posto_destino?: PostoResumo;
+  base?: { abreviacao?: string };
+  motorista?: { nome?: string };
+  cavalo?: { placa?: string };
+  tanque_carreta?: { identificacao?: string };
+  volume?: number;
+}
+
+interface TanquePosto {
+  posto?: PostoResumo;
+  combustivel?: CombustivelResumo;
+}
+
+interface EstoqueSnapshot {
+  tanque_posto?: TanquePosto;
+  volume?: number;
+}
+
+interface Cotacao {
+  posto?: PostoResumo;
+  combustivel?: CombustivelResumo;
+  base?: { abreviacao?: string };
+  preco?: number;
 }
 
 export default function DashboardPage() {
@@ -53,19 +107,19 @@ export default function DashboardPage() {
   const estoqueUrl = `/api/estoque?data=${dateStr}`;
   const cotacoesUrl = `/api/cotacoes?data=${dateStr}`;
 
-  const { data: pedidosData, loading: pedidosLoading } = useFetchData<any[]>(
+  const { data: pedidosData, loading: pedidosLoading } = useFetchData<Pedido[]>(
     pedidosUrl,
     [dateStr],
   );
-  const { data: carregData, loading: carregLoading } = useFetchData<any[]>(
+  const { data: carregData, loading: carregLoading } = useFetchData<Carregamento[]>(
     carregamentosUrl,
     [dateStr],
   );
-  const { data: estoqueData, loading: estoqueLoading } = useFetchData<any[]>(
+  const { data: estoqueData, loading: estoqueLoading } = useFetchData<EstoqueSnapshot[]>(
     estoqueUrl,
     [dateStr],
   );
-  const { data: cotacoesData, loading: cotacoesLoading } = useFetchData<any[]>(
+  const { data: cotacoesData, loading: cotacoesLoading } = useFetchData<Cotacao[]>(
     cotacoesUrl,
     [dateStr],
   );
@@ -82,10 +136,10 @@ export default function DashboardPage() {
 
     const litMap: Record<string, number> = {};
     const pedidoCombMap: Record<string, Set<string>> = {};
-    (pedidos || []).forEach((p: any) => {
+    (pedidos || []).forEach((p: Pedido) => {
       const posto = p.posto?.abreviacao || p.posto?.nome || "?";
       const combs = new Set<string>();
-      (p.itens || []).forEach((it: any) => {
+      (p.itens || []).forEach((it: PedidoItem) => {
         const comb =
           it.combustivel?.abreviacao || it.combustivel?.nome || "?";
         combs.add(comb);
@@ -96,7 +150,7 @@ export default function DashboardPage() {
     });
 
     const basesMap: Record<string, Set<string>> = {};
-    (carregs || []).forEach((c: any) => {
+    (carregs || []).forEach((c: Carregamento) => {
       const posto = c.posto_destino?.abreviacao || c.posto_destino?.nome || "?";
       const baseAbbr = c.base?.abreviacao;
       const bases = baseAbbr ? [baseAbbr] : [];
@@ -131,7 +185,7 @@ export default function DashboardPage() {
       string,
       { motorista: string; cavalo: string; tanque: string; total: number }
     > = {};
-    (carregs || []).forEach((c: any) => {
+    (carregs || []).forEach((c: Carregamento) => {
       const m = c.motorista?.nome || "?";
       const key = m;
       if (!carMap[key])
@@ -150,7 +204,7 @@ export default function DashboardPage() {
   const estoque = useMemo<EstoqueRow[]>(() => {
     const snaps = estoqueData || [];
     const estMap: Record<string, number> = {};
-    (snaps || []).forEach((s: any) => {
+    (snaps || []).forEach((s: EstoqueSnapshot) => {
       const tp = s.tanque_posto;
       if (tp?.posto?.tipo !== "FILIAL") return;
       const posto = tp.posto?.abreviacao || tp.posto?.nome || "?";
@@ -168,7 +222,7 @@ export default function DashboardPage() {
   const precos = useMemo<PrecoRow[]>(() => {
     const cotacoes = cotacoesData || [];
     const precoMap: Record<string, { preco: number; base: string }> = {};
-    (cotacoes || []).forEach((c: any) => {
+    (cotacoes || []).forEach((c: Cotacao) => {
       const posto = c.posto?.abreviacao || c.posto?.nome || "?";
       const comb = c.combustivel?.abreviacao || c.combustivel?.nome || "?";
       const base = c.base?.abreviacao || "-";
@@ -197,8 +251,8 @@ export default function DashboardPage() {
       {
         accessorKey: "total",
         header: "Litros",
-        cell: ({ row }: any) =>
-          row.getValue("total").toLocaleString("pt-BR"),
+        cell: ({ row }: { row: Row<LitragemRow> }) =>
+          row.getValue<number>("total").toLocaleString("pt-BR"),
       },
     ],
     [],
@@ -212,7 +266,7 @@ export default function DashboardPage() {
       {
         accessorKey: "total",
         header: "Litros",
-        cell: ({ row }: any) => row.getValue("total").toLocaleString("pt-BR"),
+        cell: ({ row }: { row: Row<CarregRow> }) => row.getValue<number>("total").toLocaleString("pt-BR"),
       },
     ],
     [],
@@ -225,7 +279,7 @@ export default function DashboardPage() {
       {
         accessorKey: "volume",
         header: "Volume",
-        cell: ({ row }: any) => row.getValue("volume").toLocaleString("pt-BR"),
+        cell: ({ row }: { row: Row<EstoqueRow> }) => row.getValue<number>("volume").toLocaleString("pt-BR"),
       },
     ],
     [],
@@ -239,7 +293,7 @@ export default function DashboardPage() {
       {
         accessorKey: "preco",
         header: "Preço",
-        cell: ({ row }: any) => row.getValue("preco").toFixed(4),
+        cell: ({ row }: { row: Row<PrecoRow> }) => row.getValue<number>("preco").toFixed(4),
       },
     ],
     [],

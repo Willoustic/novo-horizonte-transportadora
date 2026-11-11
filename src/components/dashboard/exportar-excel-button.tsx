@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,7 @@ import { exportarExcel } from "@/services/exportar-excel.service";
 export type Perfil = "admin" | "padrao" | "restrito";
 
 interface ExportarExcelButtonProps {
-  data: any[];
+  data: Record<string, unknown>[];
   fileName: string;
   sheetName?: string;
   headers?: Record<string, string>;
@@ -20,11 +20,11 @@ interface ExportarExcelButtonProps {
 }
 
 /**
- * Botao "Exportar Excel" (shadcn/ui Button + icone Download).
- * - Verde #16a34a (variant default) com hover amarelo #eab308.
- * - Perfil restrito nao exibe o botao (retorna null).
- * - Exportacao client-side via xlsx, sem endpoint de API.
- * - Exibe feedback de sucesso ou erro apos o clique.
+ * "Export Excel" button (shadcn/ui Button + Download icon).
+ * - Green #16a34a (default variant) with yellow #eab308 hover.
+ * - Restricted profile does not display the button (returns null).
+ * - Client-side export via xlsx, no API endpoint.
+ * - Displays success or error feedback after click.
  */
 export function ExportarExcelButton({
   data,
@@ -41,8 +41,15 @@ export function ExportarExcelButton({
     message: string;
   } | null>(null);
 
-  // Restrito nao tem operacao: nao exibe o botao.
-  if (perfil === "restrito") {
+  useEffect(() => {
+    if (feedback) {
+      const timer = setTimeout(() => setFeedback(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedback]);
+
+  // Restricted profile has no operation: do not display the button.
+  if (perfil !== "admin" && perfil !== "padrao") {
     return null;
   }
 
@@ -71,7 +78,7 @@ export function ExportarExcelButton({
         variant="default"
         size="sm"
         className={cn(
-          "bg-green-600 text-white hover:bg-yellow-500 hover:text-gray-900",
+          "bg-[#16a34a] text-white hover:bg-[#0e7a32]",
           className,
         )}
       >
@@ -80,6 +87,8 @@ export function ExportarExcelButton({
       </Button>
       {feedback && (
         <span
+          role="status"
+          aria-live="polite"
           data-testid="export-feedback"
           className={cn(
             "text-xs mt-2 block",

@@ -34,7 +34,9 @@ export function exportarExcel<T extends Record<string, unknown>>(
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
-  const fileNameSafe = fileName.replace(/\.xlsx$/i, "");
+  const fileNameSafe = fileName
+    .replace(/\.xlsx$/i, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "_");
   try {
     XLSX.writeFile(workbook, `${fileNameSafe}.xlsx`);
   } catch (error) {
